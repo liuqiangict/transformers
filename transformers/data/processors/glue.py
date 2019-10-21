@@ -118,6 +118,8 @@ def glue_convert_examples_to_features(examples, tokenizer,
         if ex_index < 5:
             logger.info("*** Example ***")
             logger.info("guid: %s" % (example.guid))
+            logger.info("text_a: %s" % (example.text_a))
+            logger.info("text_b: %s" % (example.text_b))
             logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
