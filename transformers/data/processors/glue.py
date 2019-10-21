@@ -124,7 +124,8 @@ def glue_convert_examples_to_features(examples, tokenizer,
             logger.info("label: %s (id = %d)" % (example.label, label))
 
         features.append(
-                InputFeatures(input_ids=input_ids,
+                InputFeatures(guids=example.guid,
+                              input_ids=input_ids,
                               attention_mask=attention_mask,
                               token_type_ids=token_type_ids,
                               label=label))
@@ -132,17 +133,20 @@ def glue_convert_examples_to_features(examples, tokenizer,
     if is_tf_available() and is_tf_dataset:
         def gen():
             for ex in features:
-                yield  ({'input_ids': ex.input_ids,
+                yield  ({'guids': ex.guids,
+                         'input_ids': ex.input_ids,
                          'attention_mask': ex.attention_mask,
                          'token_type_ids': ex.token_type_ids},
                         ex.label)
 
         return tf.data.Dataset.from_generator(gen,
-            ({'input_ids': tf.int32,
+            ({'guids': tf.int32,
+              'input_ids': tf.int32,
               'attention_mask': tf.int32,
               'token_type_ids': tf.int32},
              tf.int64),
-            ({'input_ids': tf.TensorShape([None]),
+            ({'guids': tf.TensorShape([None]),
+              'input_ids': tf.TensorShape([None]),
               'attention_mask': tf.TensorShape([None]),
               'token_type_ids': tf.TensorShape([None])},
              tf.TensorShape([])))
@@ -512,6 +516,39 @@ class WnliProcessor(DataProcessor):
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
+
+class QPProcessor(DataProcessor):
+    """Processor for the MRPC data set (GLUE version)."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(data_dir))
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "dev")
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line[0]
+            text_a = line[1]
+            text_b = line[2]
+            label = line[3]
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
+
 glue_tasks_num_labels = {
     "cola": 2,
     "mnli": 3,
@@ -522,6 +559,7 @@ glue_tasks_num_labels = {
     "qnli": 2,
     "rte": 2,
     "wnli": 2,
+    "qp": 2,
 }
 
 glue_processors = {
@@ -535,6 +573,7 @@ glue_processors = {
     "qnli": QnliProcessor,
     "rte": RteProcessor,
     "wnli": WnliProcessor,
+    "qp": QPProcessor,
 }
 
 glue_output_modes = {
@@ -548,4 +587,5 @@ glue_output_modes = {
     "qnli": "classification",
     "rte": "classification",
     "wnli": "classification",
+    "qp": "classification",
 }

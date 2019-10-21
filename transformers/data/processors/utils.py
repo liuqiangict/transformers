@@ -64,7 +64,8 @@ class InputFeatures(object):
         label: Label corresponding to the input
     """
 
-    def __init__(self, input_ids, attention_mask, token_type_ids, label):
+    def __init__(self, guids, input_ids, attention_mask, token_type_ids, label):
+        self.guids = guids
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
@@ -80,7 +81,7 @@ class InputFeatures(object):
 
     def to_json_string(self):
         """Serializes this instance to a JSON string."""
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+        return json.dumps(self.to_dict(), indent=4, sort_keys=True) + "\n"
 
 
 class DataProcessor(object):
@@ -118,3 +119,19 @@ class DataProcessor(object):
                     line = list(unicode(cell, 'utf-8') for cell in line)
                 lines.append(line)
             return lines
+
+    @classmethod
+    def _read_tsv_from_dir(cls, input_dir, quotechar=None):
+        """Reads a tab separated value file."""
+
+        input_files = [os.path.join(input_dir, file) for file in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, file))]
+        lines = []
+        for input_file in input_files:
+            with open(input_file, "r", encoding="utf-8-sig") as f:
+                reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+                for line in reader:
+                    if sys.version_info[0] == 2:
+                        line = list(unicode(cell, 'utf-8') for cell in line)
+                    lines.append(line)
+        return lines
+

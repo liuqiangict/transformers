@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from scipy.stats import pearsonr, spearmanr
-    from sklearn.metrics import matthews_corrcoef, f1_score
+    from sklearn.metrics import matthews_corrcoef, f1_score, roc_auc_score
     _has_sklearn = True
 except (AttributeError, ImportError) as e:
     logger.warning("To use data.metrics please install scikit-learn. See https://scikit-learn.org/stable/index.html")
@@ -56,6 +56,8 @@ if _has_sklearn:
             "corr": (pearson_corr + spearman_corr) / 2,
         }
 
+    def cal_roc_auc_score(preds, labels):
+        return roc_auc_score(labels, preds)
 
     def glue_compute_metrics(task_name, preds, labels):
         assert len(preds) == len(labels)
@@ -79,5 +81,7 @@ if _has_sklearn:
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "wnli":
             return {"acc": simple_accuracy(preds, labels)}
+        elif task_name == "qp":
+            return {"acc": simple_accuracy(preds, labels), "roc": cal_roc_auc_score(preds, labels)}
         else:
             raise KeyError(task_name)
