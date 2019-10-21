@@ -234,11 +234,11 @@ def evaluate(args, model, tokenizer, prefix=""):
             batch = tuple(t.to(args.device) for t in batch)
 
             with torch.no_grad():
-                inputs = {'input_ids':      batch[0],
-                          'attention_mask': batch[1],
-                          'labels':         batch[3]}
+                inputs = {'input_ids':      batch[1],
+                          'attention_mask': batch[2],
+                          'labels':         batch[4]}
                 if args.model_type != 'distilbert':
-                    inputs['token_type_ids'] = batch[2] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+                    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
 
@@ -268,15 +268,83 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     return results
 
+def predict(args, model, tokenizer, prefix, tasks):
+    # Loop to handle MNLI double evaluation (matched, mis-matched)
+    #eval_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
+    #eval_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (args.output_dir,)
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False):
+    #for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
+    for eval_task, eval_input_dir in tasks:
+        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir)
+
+        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+            os.makedirs(args.output_dir)
+
+        args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
+        # Note that DistributedSampler samples randomly
+        eval_sampler = SequentialSampler(eval_dataset) if args.local_rank == -1 else DistributedSampler(eval_dataset)
+        eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
+
+        # Eval!
+        logger.info("***** Running evaluation {} *****".format(prefix))
+        logger.info("  Num examples = %d", len(eval_dataset))
+        logger.info("  Batch size = %d", args.eval_batch_size)
+        eval_loss = 0.0
+        nb_eval_steps = 0
+        guids = None
+        labels = None
+        preds = None
+        for batch in tqdm(eval_dataloader, desc="Evaluating"):
+            model.eval()
+            batch = tuple(t.to(args.device) for t in batch)
+
+            with torch.no_grad():
+                inputs = {'input_ids':      batch[1],
+                          'attention_mask': batch[2],
+                          'labels':         batch[4]}
+                if args.model_type != 'distilbert':
+                    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+
+                outputs = model(**inputs)
+                tmp_eval_loss, logits = outputs[:2]
+                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+
+                eval_loss += tmp_eval_loss.mean().item()
+            nb_eval_steps += 1
+            if preds is None:
+                guids = batch[0].detach().cpu().numpy()
+                labels = inputs['labels'].detach().cpu().numpy()
+                preds = softmax_logits.detach().cpu().numpy()
+            else:
+                guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
+                labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
+                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
+
+        output_eval_file = os.path.join(args.output_dir, "predict_" + prefix + ".tsv")
+        with open(output_eval_file, "w") as writer:
+            for i, guid in enumerate(guids):
+                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+
+        preds = [pred[1] for pred in preds]
+        auc = roc_auc_score(labels, preds)
+        print(auc)
+
+    return auc
+
+
+def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
     processor = processors[task]()
     output_mode = output_modes[task]
     # Load data features from cache or dataset file
-    cached_features_file = os.path.join(args.data_dir, 'cached_{}_{}_{}_{}'.format(
+    
+    if eval_dir == None:
+        data_dir = args.input_eval_dir if evaluate else args.input_train_dir
+    else:
+        data_dir = eval_dir
+    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
@@ -285,12 +353,12 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
     else:
-        logger.info("Creating features from dataset file at %s", args.data_dir)
+        logger.info("Creating features from dataset file at %s", data_dir)
         label_list = processor.get_labels()
         if task in ['mnli', 'mnli-mm'] and args.model_type in ['roberta']:
             # HACK(label indices are swapped in RoBERTa pretrained model)
             label_list[1], label_list[2] = label_list[2], label_list[1] 
-        examples = processor.get_dev_examples(args.data_dir) if evaluate else processor.get_train_examples(args.data_dir)
+        examples = processor.get_dev_examples(data_dir) if evaluate else processor.get_train_examples(data_dir)
         features = convert_examples_to_features(examples,
                                                 tokenizer,
                                                 label_list=label_list,
@@ -533,6 +601,33 @@ def main():
             result = evaluate(args, model, tokenizer, prefix=prefix)
             result = dict((k + '_{}'.format(global_step), v) for k, v in result.items())
             results.update(result)
+
+    if args.do_predict and args.local_rank in [-1, 0]:
+        tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path if args.model_name_or_path else args.previous_model_dir, do_lower_case=args.do_lower_case)
+        checkpoints = [args.previous_model_dir]
+        if args.eval_all_checkpoints:
+            checkpoints = list(os.path.dirname(c) for c in sorted(glob.glob(args.previous_model_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
+        logger.info("Evaluate the following checkpoints: %s", checkpoints)
+        results = {}
+        tasks = [
+                    ('qp', './data/eval/google/'),
+                    ('qp', './data/eval/bing_ann/'),
+                    ('qp', './data/eval/uhrs/'),
+                    ('qp', './data/eval/panelone_5k/'),
+                    ('qp', './data/eval/adverserial/'),
+                    ('qp', './data/eval/speller_checked/'),
+                    ('qp', './data/eval/speller_usertyped/')
+                ]
+        for checkpoint in checkpoints:
+            global_step = checkpoint.split('-')[-1]
+            model = model_class.from_pretrained(checkpoint)
+            model.to(args.device)
+            auc = predict(args, model, tokenizer, global_step, tasks)
+            results[global_step] = auc
+        output_file = os.path.join(args.output_dir, "auc_result.tsv")
+        with open(output_file, "w") as writer:
+            for k, v in results.items():
+                writer.write(str(k) + '\t' + str(v) + '\n' )
 
     return results
 
