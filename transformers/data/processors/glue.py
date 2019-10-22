@@ -142,7 +142,7 @@ def glue_convert_examples_to_features(examples, tokenizer,
                         ex.label)
 
         return tf.data.Dataset.from_generator(gen,
-            ({'guids': tf.int32,
+            ({'guids': tf.int64,
               'input_ids': tf.int32,
               'attention_mask': tf.int32,
               'token_type_ids': tf.int32},
