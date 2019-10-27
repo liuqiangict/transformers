@@ -34,10 +34,11 @@ class InputExample(object):
         label: (Optional) string. The label of the example. This should be
         specified for train and dev examples, but not for test examples.
     """
-    def __init__(self, guid, text_a, text_b=None, label=None):
+    def __init__(self, guid, text_a, text_b=None, text_c=None, label=None):
         self.guid = guid
         self.text_a = text_a
         self.text_b = text_b
+        self.text_c = text_c
         self.label = label
 
     def __repr__(self):
@@ -85,6 +86,41 @@ class InputFeatures(object):
         """Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=4, sort_keys=True) + "\n"
 
+
+class PairInputFeatures(object):
+    """
+    A single set of features of data.
+
+    Args:
+        input_ids: Indices of input sequence tokens in the vocabulary.
+        attention_mask: Mask to avoid performing attention on padding token indices.
+            Mask values selected in ``[0, 1]``:
+            Usually  ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded) tokens.
+        token_type_ids: Segment token indices to indicate first and second portions of the inputs.
+        label: Label corresponding to the input
+    """
+
+    def __init__(self, guids, input_ids_a, input_ids_b, attention_mask_a, attention_mask_b, token_type_ids_a, token_type_ids_b, label):
+        self.guids = guids
+        self.input_ids_a = input_ids_a
+        self.input_ids_b = input_ids_b
+        self.attention_mask_a = attention_mask_a
+        self.attention_mask_b = attention_mask_b
+        self.token_type_ids_a = token_type_ids_a
+        self.token_type_ids_b = token_type_ids_b
+        self.label = label
+
+    def __repr__(self):
+        return str(self.to_json_string())
+
+    def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def to_json_string(self):
+        """Serializes this instance to a JSON string."""
+        return json.dumps(self.to_dict(), indent=4, sort_keys=True) + "\n"
 
 class DataProcessor(object):
     """Base class for data converters for sequence classification data sets."""
