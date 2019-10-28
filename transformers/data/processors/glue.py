@@ -18,7 +18,7 @@
 import logging
 import os
 
-from .utils import DataProcessor, InputExample, InputFeatures
+from .utils import DataProcessor, InputExample, InputFeatures, PairInputFeatures
 from ...file_utils import is_tf_available
 
 if is_tf_available():
@@ -93,27 +93,30 @@ def glue_convert_examples_to_features(examples, tokenizer,
             add_special_tokens=True,
             max_length=max_length,
         )
-        input_ids_a, token_type_ids_a = inputs["input_ids"], inputs["token_type_ids"]
-        attention_mask_a = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        input_ids_a, token_type_ids_a = inputs_a["input_ids"], inputs_a["token_type_ids"]
+        attention_mask_a = [1 if mask_padding_with_zero else 0] * len(input_ids_a)
 
-        input_ids_b, token_type_ids_b = inputs["input_ids"], inputs["token_type_ids"]
-        attention_mask_b = [1 if mask_padding_with_zero else 0] * len(input_ids)
+        input_ids_b, token_type_ids_b = inputs_b["input_ids"], inputs_b["token_type_ids"]
+        attention_mask_b = [1 if mask_padding_with_zero else 0] * len(input_ids_b)
 
         # Zero-pad up to the sequence length.
-        padding_length = max_length - len(input_ids)
         if pad_on_left:
+            padding_length = max_length - len(input_ids_a)
             input_ids_a = ([pad_token] * padding_length) + input_ids_a
             attention_mask_a = ([0 if mask_padding_with_zero else 1] * padding_length) + attention_mask_a
             token_type_ids_a = ([pad_token_segment_id] * padding_length) + token_type_ids_a
             
+            padding_length = max_length - len(input_ids_b)
             input_ids_b = ([pad_token] * padding_length) + input_ids_b
             attention_mask_b = ([0 if mask_padding_with_zero else 1] * padding_length) + attention_mask_b
             token_type_ids_b = ([pad_token_segment_id] * padding_length) + token_type_ids_b
         else:
+            padding_length = max_length - len(input_ids_a)
             input_ids_a = input_ids_a + ([pad_token] * padding_length)
             attention_mask_a = attention_mask_a + ([0 if mask_padding_with_zero else 1] * padding_length)
             token_type_ids_a = token_type_ids_a + ([pad_token_segment_id] * padding_length)
             
+            padding_length = max_length - len(input_ids_b)
             input_ids_b = input_ids_b + ([pad_token] * padding_length)
             attention_mask_b = attention_mask_b + ([0 if mask_padding_with_zero else 1] * padding_length)
             token_type_ids_b = token_type_ids_b + ([pad_token_segment_id] * padding_length)
@@ -574,8 +577,6 @@ class QPProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
             guid = line[0]
             text_a = line[1]
             text_b = line[2]
@@ -613,8 +614,6 @@ class PairProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
             guid = line[0]
             text_a = line[1]
             text_b = line[2]
@@ -666,5 +665,5 @@ glue_output_modes = {
     "rte": "classification",
     "wnli": "classification",
     "qp": "classification",
-    "pair": regression,
+    "pair": "regression",
 }

@@ -490,7 +490,7 @@ class RobertaForSequencePairwiseClassification(BertPreTrainedModel):
     base_model_prefix = "roberta"
 
     def __init__(self, config):
-        super(RobertaForSequenceClassification, self).__init__(config)
+        super(RobertaForSequencePairwiseClassification, self).__init__(config)
         #self.num_labels = config.num_labels
         self.num_labels = 1
 
