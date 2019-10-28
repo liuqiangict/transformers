@@ -141,8 +141,8 @@ def train(args, train_dataset, model, tokenizer):
             batch = tuple(t.to(args.device) for t in batch)
             inputs = {
                 'input_ids':      batch[1],
-                'attention_mask': batch[3],
-                'token_type_ids': batch[2],
+                'attention_mask': batch[2],
+                'token_type_ids': batch[3],
                 'position_ids':   batch[4]
             }
 
@@ -398,15 +398,16 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
 
     # Convert to Tensors and build dataset
     all_guids = torch.tensor([int(f.guids) for f in features], dtype=torch.long)
-    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
-    all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
-    all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
+    all_input_ids = torch.tensor([f.input_ids_a for f in features], dtype=torch.long)
+    all_attention_mask = torch.tensor([f.attention_mask_a for f in features], dtype=torch.long)
+    all_token_type_ids = torch.tensor([f.input_ids_b for f in features], dtype=torch.long)
+    all_position_ids = torch.tensor([f.attention_mask_b for f in features], dtype=torch.long)
     if output_mode == "classification":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
     elif output_mode == "regression":
         all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
-    dataset = TensorDataset(all_guids, all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
+    dataset = TensorDataset(all_guids, all_input_ids, all_attention_mask, all_token_type_ids, all_position_ids, all_labels)
     return dataset
 
 
