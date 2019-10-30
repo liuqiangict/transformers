@@ -146,8 +146,8 @@ def train(args, train_dataset, model, tokenizer):
                 'position_ids':   batch[4]
             }
 
-            if args.model_type != 'distilbert':
-                inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+            #if args.model_type != 'distilbert':
+            #    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
             outputs = model(**inputs)
             loss = outputs[0]  # model outputs are always tuple in transformers (see doc)
 
@@ -249,43 +249,45 @@ def evaluate(args, model, tokenizer, prefix=""):
         eval_loss = 0.0
         nb_eval_steps = 0
         preds = None
+        logits_a_all = None
+        logits_b_all = None
+        preds = None
         out_label_ids = None
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             model.eval()
             batch = tuple(t.to(args.device) for t in batch)
 
             with torch.no_grad():
-                inputs = {'input_ids':      batch[1],
-                          'attention_mask': batch[2],
-                          'labels':         batch[4]}
-                if args.model_type != 'distilbert':
-                    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+                inputs = {
+                    'input_ids':      batch[1],
+                    'attention_mask': batch[2],
+                    'token_type_ids': batch[3],
+                    'position_ids':   batch[4]
+                }
+                #if args.model_type != 'distilbert':
+                #    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
                 outputs = model(**inputs)
-                tmp_eval_loss, logits = outputs[:2]
+                tmp_eval_loss, logits_a, logits_b = outputs
 
-                eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
-            if preds is None:
-                preds = logits.detach().cpu().numpy()
-                out_label_ids = inputs['labels'].detach().cpu().numpy()
+            if logits_a_all is None:
+                logits_a_all = logits_a.detach().cpu().numpy()
+                logits_b_all = logits_b.detach().cpu().numpy()
             else:
-                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
-                out_label_ids = np.append(out_label_ids, inputs['labels'].detach().cpu().numpy(), axis=0)
+                logits_a_all = np.append(logits_a_all, logits_a.detach().cpu().numpy(), axis=0)
+                logits_b_all = np.append(logits_b_all, logits_b.detach().cpu().numpy(), axis=0)
 
-        eval_loss = eval_loss / nb_eval_steps
-        if args.output_mode == "classification":
-            preds = np.argmax(preds, axis=1)
-        elif args.output_mode == "regression":
-            preds = np.squeeze(preds)
-        result = compute_metrics(eval_task, preds, out_label_ids)
-        results.update(result)
+        total = 0.0
+        correct = 0.0
+        for la, lb in zip(logits_a_all, logits_b_all):
+            total += 1
+            if la < lb:
+                correct += 1
+        acc = correct / total
+        print("Accuracy:", acc)
 
-        output_eval_file = os.path.join(eval_output_dir, prefix, "eval_results.txt")
-        with open(output_eval_file, "w") as writer:
-            logger.info("***** Eval results {} *****".format(prefix))
-            for key in sorted(result.keys()):
-                logger.info("  %s = %s", key, str(result[key]))
-                writer.write("%s = %s\n" % (key, str(result[key])))
+        results['acc'] = acc
+
 
     return results
 

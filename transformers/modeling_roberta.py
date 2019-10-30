@@ -500,6 +500,7 @@ class RobertaForSequencePairwiseClassification(BertPreTrainedModel):
     def forward(self, input_ids, attention_mask=None, 
                 token_type_ids=None, position_ids=None, 
                 head_mask=None, labels=None):
+
         outputs_a = self.roberta(input_ids,
                                attention_mask=attention_mask,
                                token_type_ids=None,
@@ -516,11 +517,10 @@ class RobertaForSequencePairwiseClassification(BertPreTrainedModel):
         logits_a = self.classifier(sequence_output_a)
         logits_b = self.classifier(sequence_output_b)
 
-        loss = -torch.max((logits_a - logits_b), torch.zeros(logits_a))
-        outputs = (loss, logits_a, logits_b) + outputs[2:]
+        loss = torch.sum(torch.max((logits_a - logits_b), torch.zeros(logits_a.size()).cuda().half()))
+        outputs = (loss, logits_a, logits_b)
 
         return outputs  # loss, logits_a, logits_b (hidden_states), (attentions)
-
 
 
 class RobertaClassificationHead(nn.Module):
