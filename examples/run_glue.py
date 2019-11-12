@@ -24,6 +24,7 @@ import os
 import random
 
 import numpy as np
+from sklearn.metrics import roc_auc_score
 import torch
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
@@ -290,7 +291,8 @@ def predict(args, model, tokenizer, prefix, tasks):
     #eval_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (args.output_dir,)
 
     #for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
-    for eval_task, eval_input_dir in tasks:
+    aucs = []
+    for eval_task, eval_name, eval_input_dir in tasks:
         eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir)
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
@@ -336,7 +338,7 @@ def predict(args, model, tokenizer, prefix, tasks):
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
                 preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
 
-        output_eval_file = os.path.join(args.output_dir, "predict_" + prefix + ".tsv")
+        output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
             for i, guid in enumerate(guids):
                 writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
@@ -344,8 +346,14 @@ def predict(args, model, tokenizer, prefix, tasks):
         preds = [pred[1] for pred in preds]
         auc = roc_auc_score(labels, preds)
         print(auc)
+        aucs.append(auc)
 
-    return auc
+
+    output_eval_file = os.path.join(args.output_dir, "auc_" + prefix + ".tsv")
+    with open(output_eval_file, "w") as writer:
+        writer.write('\t'.join([str(auc) for auc in aucs]) + '\n')
+
+    return aucs
 
 
 def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None):
@@ -567,7 +575,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -633,13 +642,13 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', './data/eval/google/'),
-                    ('qp', './data/eval/bing_ann/'),
-                    ('qp', './data/eval/uhrs/'),
-                    ('qp', './data/eval/panelone_5k/'),
-                    ('qp', './data/eval/adverserial/'),
-                    ('qp', './data/eval/speller_checked/'),
-                    ('qp', './data/eval/speller_usertyped/')
+                    ('qp', 'google', './data/eval/google/'),
+                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
+                    ('qp', 'uhrs', './data/eval/uhrs/'),
+                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    ('qp', 'adverserial', './data/eval/adverserial/'),
+                    #('qp', './data/eval/speller_checked/'),
+                    #('qp', './data/eval/speller_usertyped/')
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
@@ -650,7 +659,7 @@ def main():
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         with open(output_file, "w") as writer:
             for k, v in results.items():
-                writer.write(str(k) + '\t' + str(v) + '\n' )
+                writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
 
     return results
 
