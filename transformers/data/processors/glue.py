@@ -541,8 +541,8 @@ class QPProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
+            #if i == 0:
+            #    continue
             guid = line[0]
             text_a = line[1]
             text_b = line[2]
