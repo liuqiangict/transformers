@@ -322,11 +322,12 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                     outputs = model(**inputs)
                     tmp_eval_loss, logits = outputs[:2]
-                    #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                    softmax_logits = torch.nn.functional.softmax(logits, dim=1)
                     
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                preds = logits.detach().cpu().numpy()
+                #preds = logits.detach().cpu().numpy()
+                preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
                     writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
                 processed += 1
@@ -631,7 +632,8 @@ def main():
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
-                    ('qp', 'L4_23', './data/predict_l4_24/23'),
+                    #('qp', 'L4_23', './data/predict_l4_24/23'),
+                    ('qp', 'inter', './data/intermediate/sample.tsv'),
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
