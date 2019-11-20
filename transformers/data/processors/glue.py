@@ -63,6 +63,7 @@ def glue_convert_examples_to_features(examples, tokenizer,
     if is_tf_available() and isinstance(examples, tf.data.Dataset):
         is_tf_dataset = True
 
+    '''
     if task is not None:
         processor = glue_processors[task]()
         if label_list is None:
@@ -73,6 +74,7 @@ def glue_convert_examples_to_features(examples, tokenizer,
             logger.info("Using output mode %s for task %s" % (output_mode, task))
 
     label_map = {label: i for i, label in enumerate(label_list)}
+    '''
 
     features = []
     for (ex_index, example) in enumerate(examples):
@@ -108,12 +110,14 @@ def glue_convert_examples_to_features(examples, tokenizer,
         assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask), max_length)
         assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids), max_length)
 
-        if output_mode == "classification":
-            label = label_map[example.label]
-        elif output_mode == "regression":
-            label = float(example.label)
-        else:
-            raise KeyError(output_mode)
+        #if output_mode == "classification":
+        #    label = label_map[example.label]
+        #elif output_mode == "regression":
+        #    label = float(example.label)
+        #else:
+        #    raise KeyError(output_mode)
+
+        label = [float(la) for la in example.label]
 
         if ex_index < 5:
             logger.info("*** Example ***")
@@ -123,7 +127,8 @@ def glue_convert_examples_to_features(examples, tokenizer,
             logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-            logger.info("label: %s (id = %d)" % (example.label, label))
+            #logger.info("label: %s (id = %s)" % (example.label, label))
+            logger.info("label: %s (id = %s)" % (';'.join(example.label), ';'.join([str(la) for la in label])))
 
         features.append(
                 InputFeatures(guids=example.guid,
@@ -146,7 +151,7 @@ def glue_convert_examples_to_features(examples, tokenizer,
               'input_ids': tf.int32,
               'attention_mask': tf.int32,
               'token_type_ids': tf.int32},
-             tf.int64),
+             tf.float),
             ({'guids': tf.TensorShape([None]),
               'input_ids': tf.TensorShape([None]),
               'attention_mask': tf.TensorShape([None]),
@@ -551,6 +556,40 @@ class QPProcessor(DataProcessor):
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
+
+class QPProcessor_MultiTarget(DataProcessor):
+    """Processor for the MRPC data set (GLUE version)."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(data_dir))
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "dev")
+
+    def get_labels(self):
+        """See base class."""
+        return ["3", "4", "5", "6", "7"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = line[0]
+            text_a = line[1]
+            text_b = line[2]
+            if set_type == "train":
+                label = [line[3], line[4], line[5], line[6], line[7]]
+            else:
+                label = [line[3], line[3], line[3], line[3], line[3]]
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
+
 glue_tasks_num_labels = {
     "cola": 2,
     "mnli": 3,
@@ -562,6 +601,7 @@ glue_tasks_num_labels = {
     "rte": 2,
     "wnli": 2,
     "qp": 2,
+    "qp_multi_target": 5,
 }
 
 glue_processors = {
@@ -576,6 +616,7 @@ glue_processors = {
     "rte": RteProcessor,
     "wnli": WnliProcessor,
     "qp": QPProcessor,
+    "qp_multi_target": QPProcessor_MultiTarget,
 }
 
 glue_output_modes = {
@@ -590,4 +631,5 @@ glue_output_modes = {
     "rte": "classification",
     "wnli": "classification",
     "qp": "classification",
+    "qp_multi_target": "regression",
 }

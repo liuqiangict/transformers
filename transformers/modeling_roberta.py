@@ -22,7 +22,7 @@ import logging
 
 import torch
 import torch.nn as nn
-from torch.nn import CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss, MSELoss, MultiLabelSoftMarginLoss
 
 from .modeling_bert import BertEmbeddings, BertLayerNorm, BertModel, BertPreTrainedModel, gelu
 from .configuration_roberta import RobertaConfig
@@ -316,6 +316,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
     def __init__(self, config):
         super(RobertaForSequenceClassification, self).__init__(config)
         self.num_labels = config.num_labels
+        self.is_multi_target = True
 
         self.roberta = RobertaModel(config)
         self.classifier = RobertaClassificationHead(config)
@@ -336,6 +337,9 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
                 #  We are doing regression
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
+            elif self.is_multi_target:
+                loss_fct = MultiLabelSoftMarginLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
