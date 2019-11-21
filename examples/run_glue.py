@@ -267,7 +267,7 @@ def evaluate(args, model, tokenizer, prefix=""):
                 if args.model_type != 'distilbert':
                     inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
                 outputs = model(**inputs)
-                tmp_eval_loss, logits = outputs[:2]
+                tmp_eval_loss, logits = outputs[:5]
 
                 eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
@@ -593,7 +593,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class(config)
     #model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
