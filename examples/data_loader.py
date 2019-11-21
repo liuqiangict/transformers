@@ -114,7 +114,8 @@ class QADataset(Dataset):
         attention_mask = attention_mask + ([0 if mask_padding_with_zero else 1] * padding_length)
         token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
 
-        label = map_to_torch_float([float(la) for la in [nlr_score, xlnet_score, roberta_score, turing_roberta_score, albert_score]])
+        #label = map_to_torch_float([float(la) for la in [nlr_score, xlnet_score, roberta_score, turing_roberta_score, albert_score]])
+        label = map_to_torch_float([float(la) for la in [albert_score]])
         
         return tuple([map_to_torch([int(guid)]), map_to_torch(input_ids), map_to_torch(attention_mask), map_to_torch(token_type_ids), label])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)

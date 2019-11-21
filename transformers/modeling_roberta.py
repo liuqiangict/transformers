@@ -22,7 +22,7 @@ import logging
 
 import torch
 import torch.nn as nn
-from torch.nn import CrossEntropyLoss, MSELoss, MultiLabelSoftMarginLoss
+from torch.nn import CrossEntropyLoss, MSELoss, MultiLabelSoftMarginLoss, BCEWithLogitsLoss
 
 from .modeling_bert import BertEmbeddings, BertLayerNorm, BertModel, BertPreTrainedModel, gelu
 from .configuration_roberta import RobertaConfig
@@ -316,7 +316,8 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
     def __init__(self, config):
         super(RobertaForSequenceClassification, self).__init__(config)
         self.num_labels = config.num_labels
-        self.is_multi_target = True
+        self.num_labels = 1
+        #self.is_multi_target = True
 
         self.roberta = RobertaModel(config)
         self.classifier = RobertaClassificationHead(config)
@@ -333,16 +334,17 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
 
         outputs = (logits,) + outputs[2:]
         if labels is not None:
-            if self.num_labels == 1:
+            #if self.num_labels == 1:
                 #  We are doing regression
-                loss_fct = MSELoss()
-                loss = loss_fct(logits.view(-1), labels.view(-1))
-            elif self.is_multi_target:
-                loss_fct = MultiLabelSoftMarginLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
-            else:
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            #    loss_fct = MSELoss()
+            #    loss = loss_fct(logits.view(-1), labels.view(-1))
+            #elif self.is_multi_target:
+            #    loss_fct = MultiLabelSoftMarginLoss()
+            #    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
+            #else:
+            #loss_fct = CrossEntropyLoss()
+            loss_fct = BCEWithLogitsLoss()
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
@@ -463,7 +465,8 @@ class RobertaClassificationHead(nn.Module):
         super(RobertaClassificationHead, self).__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
+        #self.out_proj = nn.Linear(config.hidden_size, config.num_labels)
+        self.out_proj = nn.Linear(config.hidden_size, 1)
 
     def forward(self, features, **kwargs):
         x = features[:, 0, :]  # take <s> token (equiv. to [CLS])

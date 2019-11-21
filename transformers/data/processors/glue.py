@@ -573,7 +573,8 @@ class QPProcessor_MultiTarget(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return ["3", "4", "5", "6", "7"]
+        #return ["1", "4", "5", "6", "7"]
+        return ["1"]
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -583,9 +584,11 @@ class QPProcessor_MultiTarget(DataProcessor):
             text_a = line[1]
             text_b = line[2]
             if set_type == "train":
-                label = [line[3], line[4], line[5], line[6], line[7]]
+                #label = [line[3], line[4], line[5], line[6], line[7]]
+                label = line[7]
             else:
-                label = [line[3], line[3], line[3], line[3], line[3]]
+                #label = [line[3], line[3], line[3], line[3], line[3]]
+                label = line[3]
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
@@ -601,7 +604,7 @@ glue_tasks_num_labels = {
     "rte": 2,
     "wnli": 2,
     "qp": 2,
-    "qp_multi_target": 5,
+    "qp_multi_target": 1,
 }
 
 glue_processors = {
