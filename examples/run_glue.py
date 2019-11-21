@@ -57,6 +57,8 @@ from transformers import glue_output_modes as output_modes
 from transformers import glue_processors as processors
 from transformers import glue_convert_examples_to_features as convert_examples_to_features
 
+from data_loader import QADataset, QueryPassageFineTuningDataset
+
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, XLNetConfig, XLMConfig, 
@@ -79,10 +81,15 @@ def set_seed(args):
         torch.cuda.manual_seed_all(args.seed)
 
 
-def train(args, train_dataset, model, tokenizer):
+#def train(args, train_dataset, model, tokenizer):
+def train(args, model, tokenizer):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
+
+    train_examples = QueryPassageFineTuningDataset(args.input_train_dir, mode='train')
+    train_dataset = QADataset(tokenizer, train_examples, args.max_seq_length)
+    #train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
 
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
     train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
@@ -170,7 +177,7 @@ def train(args, train_dataset, model, tokenizer):
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Log metrics
                     if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer)
+                        results = evaluate(args, model, tokenizer, str(global_step))
                         for key, value in results.items():
                             tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
                     tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
@@ -284,7 +291,6 @@ def evaluate(args, model, tokenizer, prefix=""):
             scores = [pred[i] for pred in preds]
             labels = [label[i] for label in out_labels]
             auc = roc_auc_score(labels, scores)
-            print(name, '\t', auc)
             results[name] = auc
 
         output_eval_file = os.path.join(eval_output_dir, "eval_" + prefix + "_results.txt")
@@ -403,9 +409,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
                                                 pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
                                                 pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
         )
-        #if args.local_rank in [-1, 0]:
-        #    logger.info("Saving features into cached file %s", cached_features_file)
-        #    torch.save(features, cached_features_file)
+        if args.local_rank in [-1, 0]:
+            logger.info("Saving features into cached file %s", cached_features_file)
+            torch.save(features, cached_features_file)
 
     if args.local_rank == 0 and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
@@ -599,8 +605,9 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
-        global_step, tr_loss = train(args, train_dataset, model, tokenizer)
+        #train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
+        #global_step, tr_loss = train(args, train_dataset, model, tokenizer)
+        global_step, tr_loss = train(args, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
 
