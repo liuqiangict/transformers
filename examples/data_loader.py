@@ -90,6 +90,8 @@ class QADataset(Dataset):
                                       mask_padding_with_zero=True):
 
         '''
+
+        '''
         pad_on_left=False
         pad_token=self.tokenizer.convert_tokens_to_ids([self.tokenizer.pad_token])[0]
         pad_token_segment_id=0
@@ -118,6 +120,16 @@ class QADataset(Dataset):
         label = map_to_torch_float([float(la) for la in [albert_score]])
         
         return tuple([map_to_torch([int(guid)]), map_to_torch(input_ids), map_to_torch(attention_mask), map_to_torch(token_type_ids), label])
+        '''
+
+        guid, str_input_ids, str_attention_mask, str_token_type_ids, str_label = self.data.all_pairs[i]
+        guid = map_to_torch([int(guid)])
+        input_ids = map_to_torch([int(id) for id in str_input_ids.split(';')])
+        attention_mask = map_to_torch[int(id) for id in str_attention_mask.split(';')])
+        token_type_ids = map_to_torch[int(id) for id in str_token_type_ids.split(';')])
+        label = map_to_torch_float([float(la) for la in str_label.split(';')])
+
+        return tuple([guid, input_ids, attention_mask, token_type_ids, label])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)
 
 class QueryPassageFineTuningDataset:
