@@ -127,7 +127,7 @@ class QADataset(Dataset):
         input_ids = map_to_torch([int(id) for id in str_input_ids.split(';')])
         attention_mask = map_to_torch([int(id) for id in str_attention_mask.split(';')])
         token_type_ids = map_to_torch([int(id) for id in str_token_type_ids.split(';')])
-        label = map_to_torch_float([float(la) for la in str_label.split(';')])
+        label = map_to_torch_float([float(str_label.split(';')[4])])
 
         return tuple([guid, input_ids, attention_mask, token_type_ids, label])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)
@@ -139,7 +139,7 @@ class QueryPassageFineTuningDataset:
             for i, line in enumerate(tqdm(fd)):
                 line = line.replace('\n', '')
                 entities = line.split('\t')
-                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6], entities[7]])
+                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4]])
                 all_pairs.append(data)
                 if i > readin:
                     break
