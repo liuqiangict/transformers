@@ -125,8 +125,8 @@ class QADataset(Dataset):
         guid, str_input_ids, str_attention_mask, str_token_type_ids, str_label = self.data.all_pairs[i]
         guid = map_to_torch([int(guid)])
         input_ids = map_to_torch([int(id) for id in str_input_ids.split(';')])
-        attention_mask = map_to_torch[int(id) for id in str_attention_mask.split(';')])
-        token_type_ids = map_to_torch[int(id) for id in str_token_type_ids.split(';')])
+        attention_mask = map_to_torch([int(id) for id in str_attention_mask.split(';')])
+        token_type_ids = map_to_torch([int(id) for id in str_token_type_ids.split(';')])
         label = map_to_torch_float([float(la) for la in str_label.split(';')])
 
         return tuple([guid, input_ids, attention_mask, token_type_ids, label])
