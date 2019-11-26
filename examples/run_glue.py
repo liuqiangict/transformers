@@ -275,6 +275,8 @@ def evaluate(args, model, tokenizer, prefix=""):
             preds = np.squeeze(preds)
         result = compute_metrics(eval_task, preds, out_label_ids)
         results.update(result)
+        auc = roc_auc_score(out_label_ids, preds)
+        results["roc_auc_sp"] = auc
 
         output_eval_file = os.path.join(eval_output_dir, "eval_results" + prefix + ".txt")
         with open(output_eval_file, "w") as writer:
