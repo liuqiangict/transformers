@@ -331,6 +331,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
         logits = self.classifier(sequence_output)
 
         outputs = (logits,) + outputs[2:]
+        '''
         if labels is not None:
             if self.num_labels == 1:
                 #  We are doing regression
@@ -339,6 +340,11 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            outputs = (loss,) + outputs
+        '''        
+        if labels is not None:
+            loss_fct = nn.BCEWithLogitsLoss()
+            loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
