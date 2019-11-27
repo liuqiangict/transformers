@@ -344,7 +344,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
         '''        
         if labels is not None:
             loss_fct = nn.BCEWithLogitsLoss()
-            loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, self.num_labels))
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
