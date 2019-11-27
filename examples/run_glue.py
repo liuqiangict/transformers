@@ -350,7 +350,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
     else:
         data_dir = eval_dir
     #cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}_{}'.format(
-    cached_features_file = os.path.join('./data/predict_l4_24_tf_records/', 'cached_{}_{}_{}_{}_{}'.format(
+    #cached_features_file = os.path.join('./data/predict_l4_24_tf_records/', 'cached_{}_{}_{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}_{}'.format(
         eval_name if eval_name != None else 'data',
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
@@ -633,7 +634,8 @@ def main():
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                     #('qp', 'L4_23', './data/predict_l4_24/23'),
-                    ('qp', 'inter', './data/intermediate/sample.tsv'),
+                    #('qp', 'inter', './data/intermediate/sample.tsv'),
+                    ('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
