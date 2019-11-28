@@ -635,7 +635,8 @@ def main():
                     #('qp', './data/eval/speller_usertyped/')
                     #('qp', 'L4_23', './data/predict_l4_24/23'),
                     #('qp', 'inter', './data/intermediate/sample.tsv'),
-                    ('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
+                    #('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
+                    ('qp', 'uhrs_quantus_score', './data/uhrs_quantus/uhrs_quantus_all'),
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
