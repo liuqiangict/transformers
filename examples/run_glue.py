@@ -636,7 +636,9 @@ def main():
                     #('qp', 'L4_23', './data/predict_l4_24/23'),
                     #('qp', 'inter', './data/intermediate/sample.tsv'),
                     #('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
-                    ('qp', 'uhrs_quantus_score', './data/uhrs_quantus/uhrs_quantus_all'),
+                    #('qp', 'uhrs_quantus_score', './data/uhrs_quantus/uhrs_quantus_all'),
+                    ('qp', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/quantus.pointwise.dev.data'),
+                    ('qp', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/quantus.pairwise.dev.data'),
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
