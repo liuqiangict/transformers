@@ -307,7 +307,7 @@ def predict(args, model, tokenizer, prefix, tasks):
         logger.info("***** Running evaluation {} *****".format(prefix))
         logger.info("  Num examples = %d", len(eval_dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
-        output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + ".tsv")
+        output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
             processed = 0
             for batch in tqdm(eval_dataloader, desc="Evaluating"):
@@ -559,8 +559,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
-    model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -637,8 +637,11 @@ def main():
                     #('qp', 'inter', './data/intermediate/sample.tsv'),
                     #('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
                     #('qp', 'uhrs_quantus_score', './data/uhrs_quantus/uhrs_quantus_all'),
-                    ('qp', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/quantus.pointwise.dev.data'),
-                    ('qp', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/quantus.pairwise.dev.data'),
+                    #('qp', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/quantus.pointwise.dev.data'),
+                    #('qp', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/quantus.pairwise.dev.data'),
+                    #('qp', 'sbs', './data/Caption/sbs/eval/pointwise/sbs_sep_2019.pointwise.dev.tsv'),
+                    #('qp', 'malta', './data/Caption/Malta/eval/pointwise/malta.pointwise.dev.tsv'),
+                    ('qp', 'maroc', './data/Caption/Marco/eval/pointwise/marco.pointwise.dev.tsv'),
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
