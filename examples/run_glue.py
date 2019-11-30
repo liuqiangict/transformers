@@ -327,25 +327,27 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
-                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
                 eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
             else:
                 guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
-                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
-        with open(output_eval_file, "w") as writer:
-            for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+        #with open(output_eval_file, "w") as writer:
+        #    for i, guid in enumerate(guids):
+        #writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) + '\n' )
+        #        writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\n' )
 
-        preds = [pred[1] for pred in preds]
+        #preds = [pred[1] for pred in preds]
+        preds = [pred[0] for pred in preds]
         auc = roc_auc_score(labels, preds)
         print(auc)
         aucs.append(auc)
@@ -577,8 +579,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
-    model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -660,8 +662,7 @@ def main():
             results[global_step] = auc
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         with open(output_file, "w") as writer:
-            for k, v in results.items():
-                writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
+            writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
 
     return results
 
