@@ -654,15 +654,15 @@ def main():
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
+        output_file = os.path.join(args.output_dir, "auc_result.tsv")
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
             auc = predict(args, model, tokenizer, global_step, tasks)
             results[global_step] = auc
-        output_file = os.path.join(args.output_dir, "auc_result.tsv")
-        with open(output_file, "w") as writer:
-            writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
+            with open(output_file, "a") as writer:
+                writer.write(str(global_step) + '\t' + '\t'.join([str(va) for va in auc]) + '\n' )
 
     return results
 
