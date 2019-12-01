@@ -341,10 +341,10 @@ def predict(args, model, tokenizer, prefix, tasks):
                 preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
-        #with open(output_eval_file, "w") as writer:
-        #    for i, guid in enumerate(guids):
-        #writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) + '\n' )
-        #        writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\n' )
+        with open(output_eval_file, "w") as writer:
+            for i, guid in enumerate(guids):
+                #writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) + '\n' )
+                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0])  + "\t" + str(preds[i][0]) + '\n' )
 
         #preds = [pred[1] for pred in preds]
         preds = [pred[0] for pred in preds]
