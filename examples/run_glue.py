@@ -368,10 +368,11 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
     output_mode = output_modes[task]
     # Load data features from cache or dataset file
     
-    if eval_dir == None:
-        data_dir = args.input_eval_dir if evaluate else args.input_train_dir
-    else:
-        data_dir = eval_dir
+    #if eval_dir == None:
+    #    data_dir = args.input_eval_dir if evaluate else args.input_train_dir
+    #else:
+    #    data_dir = eval_dir
+    data_dir = args.output_dir
     cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
@@ -511,6 +512,7 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
+    parser.add_argument('--predict_number', type=str, default='', help="For distant debugging.")
     args = parser.parse_args()
 
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
@@ -579,8 +581,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
-    #model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -646,13 +648,12 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/eval/google/'),
-                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    ('qp', 'uhrs', './data/eval/uhrs/'),
-                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    ('qp', 'adverserial', './data/eval/adverserial/'),
-                    #('qp', './data/eval/speller_checked/'),
-                    #('qp', './data/eval/speller_usertyped/')
+                    #('qp', 'google', './data/eval/google/'),
+                    #('qp', 'bing_ann', './data/eval/bing_ann/'),
+                    #('qp', 'uhrs', './data/eval/uhrs/'),
+                    #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    #('qp', 'adverserial', './data/eval/adverserial/'),
+                    ('qp', 'uhrs_quantus_' + args.predict_number, './data/quantus_clean/uhrs_quantus_4/' + args.predict_number),
                 ]
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         for checkpoint in checkpoints:
