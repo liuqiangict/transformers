@@ -294,6 +294,7 @@ def evaluate(args, model, tokenizer, prefix=""):
             results[name] = auc
 
         output_eval_file = os.path.join(eval_output_dir, "eval_" + prefix + "_results.txt")
+
         with open(output_eval_file, "w") as writer:
             logger.info("***** Eval results {} *****".format(prefix))
             for key, value in results.items():

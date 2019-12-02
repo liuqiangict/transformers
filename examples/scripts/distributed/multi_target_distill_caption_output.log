@@ -1,0 +1,44 @@
+nohup: ignoring input
+Setting up rank id. Check /tmp/RankSetupLog
+./run_multi_node.sh: 39: [: worker-0: unexpected operator
+192.168.0.68 worker-0 1
+./run_multi_node.sh: 39: [: worker-1: unexpected operator
+192.168.0.44 worker-1 2
+./run_multi_node.sh: 39: [: worker-2: unexpected operator
+192.168.0.42 worker-2 3
+./run_multi_node.sh: 39: [: worker-3: unexpected operator
+192.168.0.128 worker-3 4
+./run_multi_node.sh: 39: [: worker-4: unexpected operator
+192.168.0.149 worker-4 5
+./run_multi_node.sh: 39: [: worker-5: unexpected operator
+192.168.0.72 worker-5 6
+./run_multi_node.sh: 39: [: worker-6: unexpected operator
+192.168.0.109 worker-6 7
+./run_multi_node.sh: 39: [: worker-7: unexpected operator
+192.168.0.164 worker-7 8
+/tmp/host-ranks-master:
+192.168.0.68 worker-0 1
+192.168.0.44 worker-1 2
+192.168.0.42 worker-2 3
+192.168.0.128 worker-3 4
+192.168.0.149 worker-4 5
+192.168.0.72 worker-5 6
+192.168.0.109 worker-6 7
+192.168.0.164 worker-7 8
+[1] 03:09:48 [SUCCESS] worker-3
+[2] 03:09:48 [SUCCESS] worker-5
+[3] 03:09:48 [SUCCESS] worker-6
+[4] 03:09:48 [SUCCESS] worker-7
+[5] 03:09:48 [SUCCESS] worker-1
+[6] 03:09:48 [SUCCESS] worker-0
+[7] 03:09:48 [SUCCESS] worker-2
+[8] 03:09:48 [SUCCESS] worker-4
+Running Job Script. Check /tmp/DistributedJobLogs and /tmp/DistributedErrorLogs
+[1] 03:09:52 [SUCCESS] worker-7
+[2] 03:09:52 [SUCCESS] worker-5
+[3] 03:09:52 [SUCCESS] worker-3
+[4] 03:09:52 [SUCCESS] worker-6
+[5] 03:09:52 [SUCCESS] worker-1
+[6] 03:09:52 [SUCCESS] worker-4
+[7] 03:09:52 [SUCCESS] worker-0
+[8] 03:09:52 [SUCCESS] worker-2
