@@ -138,7 +138,7 @@ class QueryPassageFineTuningDataset:
             for i, line in enumerate(tqdm(fd)):
                 line = line.replace('\n', '')
                 entities = line.split('\t')
-                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4]])
+                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6], entities[7]])
                 all_pairs.append(data)
                 if i > readin:
                     break
