@@ -372,8 +372,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    #cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
+    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
+    #cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
