@@ -12,6 +12,7 @@ export PYTHONPATH=/home/qiangliu/Git/Mine/transformers/
 
 # NCCL_SOCKET_IFNAME=^lo,docker0,veth NCCL_DEBUG=WARN \
 #NCCL_IB_DISABLE=1 NCCL_DEBUG=INFO \
+:'
 NCCL_SOCKET_IFNAME=^lo,docker0,veth NCCL_DEBUG=INFO \
 NCCL_TREE_THRESHOLD=0 \
 python3.6 -m torch.distributed.launch \
@@ -38,5 +39,6 @@ ${APPDIR}/run_glue.py \
 --logging_steps 1000 \
 --fp16 \
 --output_dir /home/qiangliu/Git/Mine/transformers/examples/data/Caption/distill/roberta_distill/
+'
 
 
