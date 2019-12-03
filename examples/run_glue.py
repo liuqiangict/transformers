@@ -373,11 +373,13 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
     else:
         data_dir = eval_dir
     cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
-    #cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
+    #cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)))
+        str(task),
+        #args.predict_number
+        ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -512,7 +514,7 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
-    parser.add_argument('--predict_number', type=str, default='', help="For distant debugging.")
+    parser.add_argument('--predict_number', type=str, default='0', help="For distant debugging.")
     args = parser.parse_args()
 
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
@@ -648,12 +650,12 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    #('qp', 'google', './data/eval/google/'),
-                    #('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    #('qp', 'uhrs', './data/eval/uhrs/'),
-                    #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    #('qp', 'adverserial', './data/eval/adverserial/'),
-                    ('qp', 'uhrs_quantus_' + args.predict_number, './data/quantus_clean/uhrs_quantus_4/' + args.predict_number),
+                    ('qp', 'google', './data/eval/google/'),
+                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
+                    ('qp', 'uhrs', './data/eval/uhrs/'),
+                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    ('qp', 'adverserial', './data/eval/adverserial/'),
+                    #('qp', 'uhrs_quantus_' + args.predict_number, './data/quantus_clean/uhrs_quantus_4/' + args.predict_number),
                 ]
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         for checkpoint in checkpoints:
