@@ -880,6 +880,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForSequenceClassification, self).__init__(config)
         self.num_labels = config.num_labels
+        self.is_multi_target = True
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -908,6 +909,9 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 #  We are doing regression
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
+            elif self.is_multi_target:
+                loss_fct = MultiLabelSoftMarginLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))

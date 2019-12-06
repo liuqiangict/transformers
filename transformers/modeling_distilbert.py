@@ -578,6 +578,7 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
     def __init__(self, config):
         super(DistilBertForSequenceClassification, self).__init__(config)
         self.num_labels = config.num_labels
+        self.is_multi_target = True
 
         self.distilbert = DistilBertModel(config)
         self.pre_classifier = nn.Linear(config.dim, config.dim)
@@ -600,13 +601,15 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
         outputs = (logits,) + distilbert_output[1:]
         if labels is not None:
             if self.num_labels == 1:
-                loss_fct = nn.MSELoss()
+                #  We are doing regression
+                loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
+            elif self.is_multi_target:
+                loss_fct = MultiLabelSoftMarginLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
-                #loss_fct = nn.CrossEntropyLoss()
-                #loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-                loss_fct = nn.BCEWithLogitsLoss()
-                loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, 1))
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
