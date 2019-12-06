@@ -176,10 +176,10 @@ def train(args, model, tokenizer):
 
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Log metrics
-                    if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer, str(global_step))
-                        for key, value in results.items():
-                            tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+                    #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+                    results = evaluate(args, model, tokenizer, str(global_step))
+                    for key, value in results.items():
+                        tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
                     tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar('loss', (tr_loss - logging_loss)/args.logging_steps, global_step)
                     logging_loss = tr_loss
@@ -386,7 +386,10 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}'.format(
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         #list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
