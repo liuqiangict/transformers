@@ -211,10 +211,10 @@ def train(args, model, tokenizer):
 
         if args.local_rank in [-1, 0]:
             # Log metrics
-            if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                results = evaluate(args, model, tokenizer, str(global_step))
-                for key, value in results.items():
-                    tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+            #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+            results = evaluate(args, model, tokenizer, str(global_step))
+            for key, value in results.items():
+                tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
 
         if args.local_rank in [-1, 0]:
             output_dir = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
