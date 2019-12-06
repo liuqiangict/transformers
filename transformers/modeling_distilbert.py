@@ -30,6 +30,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+from torch.nn import CrossEntropyLoss, MSELoss, MultiLabelSoftMarginLoss
 
 from .modeling_utils import PreTrainedModel, prune_linear_layer
 from .configuration_distilbert import DistilBertConfig
