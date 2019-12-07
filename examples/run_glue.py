@@ -173,10 +173,10 @@ def train(args, train_dataset, model, tokenizer):
 
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Log metrics
-                    if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer)
-                        for key, value in results.items():
-                            tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+                    #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+                    results = evaluate(args, model, tokenizer)
+                    for key, value in results.items():
+                        tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
                     tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
                     tb_writer.add_scalar('loss', (tr_loss - logging_loss)/args.logging_steps, global_step)
                     logging_loss = tr_loss
@@ -205,10 +205,10 @@ def train(args, train_dataset, model, tokenizer):
 
         if args.local_rank in [-1, 0]:
             # Log metrics
-            if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                results = evaluate(args, model, tokenizer)
-                for key, value in results.items():
-                    tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+            #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+            results = evaluate(args, model, tokenizer)
+            for key, value in results.items():
+                tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
 
         if args.local_rank in [-1, 0]:
             output_dir = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
@@ -644,8 +644,8 @@ def main():
                     ('qp', './data/eval/uhrs/'),
                     ('qp', './data/eval/panelone_5k/'),
                     ('qp', './data/eval/adverserial/'),
-                    ('qp', './data/eval/speller_checked/'),
-                    ('qp', './data/eval/speller_usertyped/')
+                    #('qp', './data/eval/speller_checked/'),
+                    #('qp', './data/eval/speller_usertyped/')
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
