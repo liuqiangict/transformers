@@ -495,6 +495,7 @@ class RobertaForSequencePairwiseClassification(BertPreTrainedModel):
         self.num_labels = 1
 
         self.roberta = RobertaModel(config)
+        config.num_labels = 1
         self.classifier = RobertaClassificationHead(config)
     
     def forward(self, input_ids, attention_mask=None, 
@@ -520,7 +521,7 @@ class RobertaForSequencePairwiseClassification(BertPreTrainedModel):
         #loss = torch.sum(torch.max((logits_a - logits_b), torch.zeros(logits_a.size()).cuda().half()))
         scores = torch.cat([logits_a, logits_b], 1)
         loss_fct = nn.CrossEntropyLoss()
-        loss = loss_fct(scores.view(-1, 2), labels.view(-1, 1))
+        loss = loss_fct(scores.view(-1, 2), labels.view(-1, 1).squeeze(1))
 
         outputs = (loss, logits_a, logits_b)
 

@@ -143,7 +143,8 @@ def train(args, train_dataset, model, tokenizer):
                 'input_ids':      batch[1],
                 'attention_mask': batch[2],
                 'token_type_ids': batch[3],
-                'position_ids':   batch[4]
+                'position_ids':   batch[4],
+                'labels':         batch[5]
             }
 
             #if args.model_type != 'distilbert':
@@ -262,7 +263,8 @@ def evaluate(args, model, tokenizer, prefix=""):
                     'input_ids':      batch[1],
                     'attention_mask': batch[2],
                     'token_type_ids': batch[3],
-                    'position_ids':   batch[4]
+                    'position_ids':   batch[4],
+                    'labels':         batch[5]
                 }
                 #if args.model_type != 'distilbert':
                 #    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
