@@ -321,15 +321,16 @@ def predict(args, model, tokenizer, prefix, tasks):
                         inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
 
                     outputs = model(**inputs)
-                    tmp_eval_loss, logits = outputs[:2]
-                    softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                    #tmp_eval_loss, logits = outputs[:2]
+                    logits = outputs[0]
+                    #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
                     
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                #preds = logits.detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
+                #preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
-                    writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                    writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][0]) +'\n' )
                 processed += 1
                 if processed % 1000 == 0:
                     print("Processed ", (processed * args.eval_batch_size), " cases.")
@@ -647,7 +648,8 @@ def main():
                     #('qp', 'L4_1', './data/predict_l4_4/1'),
                     #('qp', 'L4_2', './data/predict_l4_4/2'),
                     #('qp', 'L4_3', './data/predict_l4_4/3'),
-                    ('qp', 'L4_' + args.predict_number, './data/predict_l4_24/' + args.predict_number),
+                    #('qp', 'L4_' + args.predict_number, './data/predict_l4_24/' + args.predict_number),
+
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
