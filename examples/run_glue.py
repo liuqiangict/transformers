@@ -644,12 +644,7 @@ def main():
                     #('qp', 'sbs', './data/Caption/sbs/eval/pointwise/sbs_sep_2019.pointwise.dev.tsv'),
                     #('qp', 'malta', './data/Caption/Malta/eval/pointwise/malta.pointwise.dev.tsv'),
                     #('qp', 'maroc', './data/Caption/Marco/eval/pointwise/marco.pointwise.dev.tsv'),
-                    #('qp', 'L4_0', './data/predict_l4_4/0'),
-                    #('qp', 'L4_1', './data/predict_l4_4/1'),
-                    #('qp', 'L4_2', './data/predict_l4_4/2'),
-                    #('qp', 'L4_3', './data/predict_l4_4/3'),
-                    #('qp', 'L4_' + args.predict_number, './data/predict_l4_24/' + args.predict_number),
-                    ('qp', 'sbs', './data/Caption/sbs/eval/pointwise/sbs_sep_2019.pointwise.dev.tsv'),
+                    ('qp', 'L4_' + args.predict_number, './data/predict_l4_24/' + args.predict_number),
 
                 ]
         for checkpoint in checkpoints:
