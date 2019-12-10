@@ -311,7 +311,7 @@ def predict(args, model, tokenizer, prefix, tasks):
     #for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
     aucs = []
     for eval_task, eval_name, eval_input_dir in tasks:
-        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir)
+        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
@@ -343,38 +343,47 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
-                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
                 eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
             else:
                 guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
-                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
-        output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
+    
+        score_dir = os.path.join(args.output_dir, prefix)
+        if not os.path.exists(score_dir):
+            os.makedirs(score_dir)
+        output_eval_file = os.path.join(score_dir, "predict_" + eval_name + ".tsv")
         with open(output_eval_file, "w") as writer:
             for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                writer.write(str(guid) + '\t' + str(labels[i][0]) 
+                + "\t" + str(preds[i][0]) 
+                + '\t' + str(preds[i][1]) 
+                + '\t' + str(preds[i][2]) 
+                + '\t' + str(preds[i][3]) 
+                + '\t' + str(preds[i][4]) 
+                +'\n' )
 
-        preds = [pred[1] for pred in preds]
-        auc = roc_auc_score(labels, preds)
-        print(auc)
-        aucs.append(auc)
+        #preds = [pred[1] for pred in preds]
+        #auc = roc_auc_score(labels, preds)
+        #print(auc)
+        #aucs.append(auc)
 
 
-    output_eval_file = os.path.join(args.output_dir, "auc_" + prefix + ".tsv")
-    with open(output_eval_file, "w") as writer:
-        writer.write('\t'.join([str(auc) for auc in aucs]) + '\n')
+    #output_eval_file = os.path.join(args.output_dir, "auc_" + prefix + ".tsv")
+    #with open(output_eval_file, "w") as writer:
+    #    writer.write('\t'.join([str(auc) for auc in aucs]) + '\n')
 
     return aucs
 
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None):
+def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None, eval_name=None):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
@@ -389,11 +398,13 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}i_{}'.format(
         'dev' if evaluate else 'train',
         #list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)))
+        str(task),
+        eval_name if eval_name else 'eval'
+        ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -665,11 +676,17 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/eval/google/'),
-                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    ('qp', 'uhrs', './data/eval/uhrs/'),
-                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    ('qp', 'adverserial', './data/eval/adverserial/'),
+                    ('qp_multi_target', 'google', './data/eval/google/'),
+                    ('qp_multi_target', 'bing_ann', './data/eval/bing_ann/'),
+                    ('qp_multi_target', 'uhrs', './data/eval/uhrs/'),
+                    ('qp_multi_target', 'panelone_5k', './data/eval/panelone_5k/'),
+                    ('qp_multi_target', 'adverserial', './data/eval/adverserial/'),
+                    
+                    ('qp_multi_target', 'malta', './data/Caption/Malta/eval/pointwise/'),
+                    ('qp_multi_target', 'marco', './data/Caption/Marco/eval/pointwise/'),
+                    ('qp_multi_target', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/'),
+                    ('qp_multi_target', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/'),
+                    ('qp_multi_target', 'sbs', './data/Caption/sbs/eval/pointwise/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
@@ -679,10 +696,10 @@ def main():
             model.to(args.device)
             auc = predict(args, model, tokenizer, global_step, tasks)
             results[global_step] = auc
-        output_file = os.path.join(args.output_dir, "auc_result.tsv")
-        with open(output_file, "w") as writer:
-            for k, v in results.items():
-                writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
+        #output_file = os.path.join(args.output_dir, "auc_result.tsv")
+        #with open(output_file, "w") as writer:
+        #    for k, v in results.items():
+        #        writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
 
     return results
 
