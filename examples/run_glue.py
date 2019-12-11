@@ -15,7 +15,8 @@
 # limitations under the License.
 """ Finetuning the library models for sequence classification on GLUE (Bert, XLM, XLNet, RoBERTa)."""
 
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division
+, print_function
 
 import argparse
 import glob
@@ -592,6 +593,9 @@ def main():
 
     logger.info("Training/evaluation parameters %s", args)
 
+    # Create output directory if needed
+    if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        os.makedirs(args.output_dir)
 
     # Training
     if args.do_train:
@@ -599,12 +603,8 @@ def main():
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
-
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0) and not args.tpu:
-        # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
-            os.makedirs(args.output_dir)
 
         logger.info("Saving model checkpoint to %s", args.output_dir)
         # Save a trained model, configuration and tokenizer using `save_pretrained()`.
@@ -657,16 +657,14 @@ def main():
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
-        for checkpoint in checkpoints:
-            global_step = checkpoint.split('-')[-1]
-            model = model_class.from_pretrained(checkpoint)
-            model.to(args.device)
-            auc = predict(args, model, tokenizer, global_step, tasks)
-            results[global_step] = auc
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         with open(output_file, "w") as writer:
-            for k, v in results.items():
-                writer.write(str(k) + '\t' + '\t'.join([str(va) for va in v]) + '\n' )
+            for checkpoint in checkpoints:
+                global_step = checkpoint.split('-')[-1]
+                model = model_class.from_pretrained(checkpoint)
+                model.to(args.device)
+                auc = predict(args, model, tokenizer, global_step, tasks)
+                writer.write(str(global_step) + '\t' + '\t'.join([str(va) for va in auc]) + '\n' )
 
     return results
 
