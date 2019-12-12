@@ -15,8 +15,7 @@
 # limitations under the License.
 """ Finetuning the library models for sequence classification on GLUE (Bert, XLM, XLNet, RoBERTa)."""
 
-from __future__ import absolute_import, division
-, print_function
+from __future__ import absolute_import, division, print_function
 
 import argparse
 import glob
@@ -301,7 +300,7 @@ def predict(args, model, tokenizer, prefix, tasks):
     #for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
     aucs = []
     for eval_task, eval_name, eval_input_dir in tasks:
-        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir)
+        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
@@ -364,7 +363,7 @@ def predict(args, model, tokenizer, prefix, tasks):
     return aucs
 
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None):
+def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None, eval_name=None):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
@@ -376,11 +375,13 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
+    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)))
+        str(task)
+        , "+" + eval_name if eval_name else ""
+        ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -603,6 +604,7 @@ def main():
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
+
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0) and not args.tpu:
 
@@ -649,11 +651,11 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/eval/google/'),
-                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    ('qp', 'uhrs', './data/eval/uhrs/'),
-                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    ('qp', 'adverserial', './data/eval/adverserial/'),
+                    ('qp', 'google', './data/eval/google/google_eval.tsv'),
+                    ('qp', 'bing_ann', './data/eval/bing_ann/bing_eval'),
+                    ('qp', 'uhrs', './data/eval/uhrs/uhrs_eval.tsv'),
+                    ('qp', 'panelone_5k', './data/eval/panelone_5k/panelone_5k_eval.tsv'),
+                    ('qp', 'adverserial', './data/eval/adverserial/adverserial_eval_rownum.tsv'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
