@@ -398,9 +398,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}i_{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
-        #list(filter(None, args.model_name_or_path.split('/'))).pop(),
+        list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
         str(task),
         eval_name if eval_name else 'eval'
