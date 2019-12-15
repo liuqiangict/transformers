@@ -359,9 +359,9 @@ def predict(args, model, tokenizer, prefix, tasks):
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
             for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][0]) +'\n' )
 
-        preds = [pred[1] for pred in preds]
+        preds = [pred[0] for pred in preds]
         auc = roc_auc_score(labels, preds)
         print(auc)
         aucs.append(auc)
@@ -374,23 +374,26 @@ def predict(args, model, tokenizer, prefix, tasks):
     return aucs
 
 
-def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None):
+def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None, eval_name=None):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
     processor = processors[task]()
     output_mode = output_modes[task]
     # Load data features from cache or dataset file
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
     
     if eval_dir == None:
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         #list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)))
+        str(task) + (('_' + eval_name) if eval_name else '')
+        ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
