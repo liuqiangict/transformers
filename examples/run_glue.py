@@ -311,7 +311,7 @@ def predict(args, model, tokenizer, prefix, tasks):
     #for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
     aucs = []
     for eval_task, eval_name, eval_input_dir in tasks:
-        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir)
+        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
