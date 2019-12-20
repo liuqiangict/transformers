@@ -584,8 +584,8 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path, num_labels=num_labels, finetuning_task=args.task_name)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name if args.tokenizer_name else args.model_name_or_path, do_lower_case=args.do_lower_case)
-    model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
-    #model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    #model = model_class.from_pretrained(args.model_name_or_path, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
+    model = model_class.from_pretrained(args.previous_model_dir, from_tf=bool('.ckpt' in args.model_name_or_path), config=config)
 
     if args.local_rank == 0:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -651,16 +651,16 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/eval/google/google_eval.tsv'),
-                    ('qp', 'bing_ann', './data/eval/bing_ann/bing_eval'),
-                    ('qp', 'uhrs', './data/eval/uhrs/uhrs_eval.tsv'),
-                    ('qp', 'panelone_5k', './data/eval/panelone_5k/panelone_5k_eval.tsv'),
-                    ('qp', 'adverserial', './data/eval/adverserial/adverserial_eval_rownum.tsv'),
+                    ('qp', 'google', './data/eval/google/'),
+                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
+                    ('qp', 'uhrs', './data/eval/uhrs/'),
+                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    ('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
-        with open(output_file, "w") as writer:
+        with open(output_file, "a") as writer:
             for checkpoint in checkpoints:
                 global_step = checkpoint.split('-')[-1]
                 model = model_class.from_pretrained(checkpoint)
