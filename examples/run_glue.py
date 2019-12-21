@@ -319,46 +319,30 @@ def predict(args, model, tokenizer, prefix, tasks):
         guids = None
         labels = None
         preds = None
-        for batch in tqdm(eval_dataloader, desc="Evaluating"):
-            model.eval()
-            batch = tuple(t.to(args.device) for t in batch)
-
-            with torch.no_grad():
-                inputs = {'input_ids':      batch[1],
-                          'attention_mask': batch[2],
-                          'labels':         batch[4]}
-                if args.model_type != 'distilbert':
-                    inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
-
-                outputs = model(**inputs)
-                tmp_eval_loss, logits = outputs[:2]
-                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
-
-                eval_loss += tmp_eval_loss.mean().item()
-            nb_eval_steps += 1
-            if preds is None:
-                guids = batch[0].detach().cpu().numpy()
-                labels = inputs['labels'].detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
-            else:
-                guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
-                labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
-                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
-
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
-            for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+            for batch in tqdm(eval_dataloader, desc="Evaluating"):
+                model.eval()
+                batch = tuple(t.to(args.device) for t in batch)
 
-        preds = [pred[1] for pred in preds]
-        auc = roc_auc_score(labels, preds)
-        print(auc)
-        aucs.append(auc)
+                with torch.no_grad():
+                    inputs = {'input_ids':      batch[1],
+                              'attention_mask': batch[2],
+                              'labels':         batch[4]}
+                    if args.model_type != 'distilbert':
+                        inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
 
+                    outputs = model(**inputs)
+                    tmp_eval_loss, logits = outputs[:2]
+                    #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
-    output_eval_file = os.path.join(args.output_dir, "auc_" + prefix + ".tsv")
-    with open(output_eval_file, "w") as writer:
-        writer.write('\t'.join([str(auc) for auc in aucs]) + '\n')
+                    eval_loss += tmp_eval_loss.mean().item()
+                nb_eval_steps += 1
+                guids = batch[0].detach().cpu().numpy()
+                labels = inputs['labels'].detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
+                for i, guid in enumerate(guids):
+                    writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
 
     return aucs
 
@@ -375,12 +359,11 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)
-        , "_" + eval_name if eval_name else ""
+        str(task) + (("_" + eval_name) if eval_name else "")
         ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
@@ -516,6 +499,9 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
+
+    parser.add_argument('--predict_number', type=str, default='0', help="For distant debugging.")
+
     args = parser.parse_args()
 
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
@@ -651,22 +637,23 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/eval/google/'),
-                    ('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    ('qp', 'uhrs', './data/eval/uhrs/'),
-                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    ('qp', 'adverserial', './data/eval/adverserial/'),
+                    #('qp', 'google', './data/eval/google/'),
+                    #('qp', 'bing_ann', './data/eval/bing_ann/'),
+                    #('qp', 'uhrs', './data/eval/uhrs/'),
+                    #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
+                    ('qp', 'intermediate_' + args.predict_number, './data/intermediateData/24/' + args.predict_number)
                 ]
-        output_file = os.path.join(args.output_dir, "auc_result.tsv")
-        with open(output_file, "a") as writer:
-            for checkpoint in checkpoints:
-                global_step = checkpoint.split('-')[-1]
-                model = model_class.from_pretrained(checkpoint)
-                model.to(args.device)
-                auc = predict(args, model, tokenizer, global_step, tasks)
-                writer.write(str(global_step) + '\t' + '\t'.join([str(va) for va in auc]) + '\n' )
+        #output_file = os.path.join(args.output_dir, "auc_result.tsv")
+        #with open(output_file, "a") as writer:
+        for checkpoint in checkpoints:
+            global_step = checkpoint.split('-')[-1]
+            model = model_class.from_pretrained(checkpoint)
+            model.to(args.device)
+            auc = predict(args, model, tokenizer, global_step, tasks)
+            #writer.write(str(global_step) + '\t' + '\t'.join([str(va) for va in auc]) + '\n' )
 
     return results
 
