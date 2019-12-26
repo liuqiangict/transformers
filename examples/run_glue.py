@@ -439,6 +439,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
+    if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        os.makedirs(output_dir)
     cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
@@ -715,14 +717,15 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    #('qp', 'google', './data/eval/google/'),
-                    #('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    #('qp', 'uhrs', './data/eval/uhrs/'),
+                    ('qp', 'google', './data/Universial/eval/google/'),
+                    ('qp', 'bing_ann', './data/Universial/eval/bing_ann/'),
+                    ('qp', 'uhrs', './data/Universial/eval/uhrs/'),
+                    ('qp', 'de_de', './data/Universial/eval/de_de/'),
+                    ('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
                     #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
-                    ('qp', 'arbitrator', './data/Arbitrator/eval/')
                 ]
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
         with open(output_file, "a") as writer:
