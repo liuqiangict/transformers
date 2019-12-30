@@ -577,6 +577,7 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
     """
     def __init__(self, config):
         super(DistilBertForSequenceClassification, self).__init__(config)
+        config.num_labels = 1
         self.num_labels = config.num_labels
 
         self.distilbert = DistilBertModel(config)
@@ -599,14 +600,19 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
 
         outputs = (logits,) + distilbert_output[1:]
         if labels is not None:
-            if self.num_labels == 1:
-                loss_fct = nn.MSELoss()
-                loss = loss_fct(logits.view(-1), labels.view(-1))
-            else:
-                #loss_fct = nn.CrossEntropyLoss()
-                #loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-                loss_fct = nn.BCEWithLogitsLoss()
-                loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, 1))
+            #if self.num_labels == 1:
+            #    loss_fct = nn.MSELoss()
+            #    loss = loss_fct(logits.view(-1), labels.view(-1))
+            #else:
+            #    loss_fct = nn.CrossEntropyLoss()
+            #    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            #    loss_fct = nn.BCEWithLogitsLoss()
+            #    loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, 1))
+
+            loss_fct = nn.MSELoss()
+            loss = loss_fct(logits.view(-1), labels.view(-1))
+            #loss_fct = nn.BCEWithLogitsLoss()
+            #loss = loss_fct(scores.view(-1, self.num_labels), labels.view(-1, 1))
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
