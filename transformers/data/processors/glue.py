@@ -633,6 +633,7 @@ glue_output_modes = {
     "qnli": "classification",
     "rte": "classification",
     "wnli": "classification",
-    "qp": "classification",
+    #"qp": "classification",
+    "qp": "regression",
     "qp_multi_target": "regression",
 }
