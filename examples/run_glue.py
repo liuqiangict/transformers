@@ -440,13 +440,14 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
     else:
         data_dir = eval_dir
     if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
-        os.makedirs(output_dir)
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}{}'.format(
+        os.makedirs(args.output_dir)
+
+    #cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}'.format(
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)
-        , "_" + eval_name if eval_name else ""
+        str(task) +(("_" + eval_name) if eval_name else "")
         ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
