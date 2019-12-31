@@ -721,10 +721,10 @@ def main():
                     ('qp', 'google', './data/Universial/eval/google/'),
                     ('qp', 'bing_ann', './data/Universial/eval/bing_ann/'),
                     ('qp', 'uhrs', './data/Universial/eval/uhrs/'),
-                    ('qp', 'de_de', './data/Universial/eval/de_de/'),
-                    ('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
-                    #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    #('qp', 'adverserial', './data/eval/adverserial/'),
+                    #('qp', 'de_de', './data/Universial/eval/de_de/'),
+                    #('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
+                    ('qp', 'panelone_5k', './data/eval/panelone_5k/'),
+                    ('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
                 ]
