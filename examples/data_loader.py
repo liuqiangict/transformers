@@ -127,8 +127,9 @@ class QADataset(Dataset):
         #label = map_to_torch_float([float(la) for la in str_label.split(';')])
         label = map_to_torch_float([float(la) for la in [nlr_score, xlnet_score, roberta_score, turing_roberta_score, albert_score]])
 
+        weights = map_to_torch_float([float(la) for la in [1.0, 1.0, 1.5, 1.5, 2.0]])
 
-        return tuple([guid, input_ids, attention_mask, token_type_ids, label])
+        return tuple([guid, input_ids, attention_mask, token_type_ids, label, weights])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)
 
 class QueryPassageFineTuningDataset:

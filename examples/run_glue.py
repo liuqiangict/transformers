@@ -148,7 +148,9 @@ def train(args, model, tokenizer):
             batch = tuple(t.to(args.device) for t in batch)
             inputs = {'input_ids':      batch[1],
                       'attention_mask': batch[2],
-                      'labels':         batch[4]}
+                      'labels':         batch[4],
+                      'loss_weights':   batch[5], 
+                      }
             if args.model_type != 'distilbert':
                 inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
             outputs = model(**inputs)
@@ -263,7 +265,8 @@ def evaluate(args, model, tokenizer, prefix=""):
             with torch.no_grad():
                 inputs = {'input_ids':      batch[1],
                           'attention_mask': batch[2],
-                          'labels':         batch[4]}
+                          'labels':         batch[4]
+                      }
                 if args.model_type != 'distilbert':
                     inputs['token_type_ids'] = batch[3] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
                 outputs = model(**inputs)

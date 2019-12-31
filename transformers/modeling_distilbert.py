@@ -588,7 +588,7 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
 
         self.init_weights()
 
-    def forward(self, input_ids,  attention_mask=None, head_mask=None, labels=None):
+    def forward(self, input_ids,  attention_mask=None, head_mask=None, labels=None, loss_weights=None):
         distilbert_output = self.distilbert(input_ids=input_ids,
                                             attention_mask=attention_mask,
                                             head_mask=head_mask)
@@ -606,7 +606,8 @@ class DistilBertForSequenceClassification(DistilBertPreTrainedModel):
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             elif self.is_multi_target:
-                loss_fct = MultiLabelSoftMarginLoss()
+                #loss_fct = MultiLabelSoftMarginLoss()
+                loss_fct = MultiLabelSoftMarginLoss(weight=loss_weights)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()

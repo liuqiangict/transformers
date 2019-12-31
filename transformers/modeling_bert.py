@@ -889,7 +889,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
         self.init_weights()
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None,
-                position_ids=None, head_mask=None, labels=None):
+                position_ids=None, head_mask=None, labels=None, loss_weights=None):
 
         outputs = self.bert(input_ids,
                             attention_mask=attention_mask,
@@ -910,7 +910,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             elif self.is_multi_target:
-                loss_fct = MultiLabelSoftMarginLoss()
+                loss_fct = MultiLabelSoftMarginLoss(weight=loss_weights)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()
