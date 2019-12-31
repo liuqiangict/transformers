@@ -378,7 +378,7 @@ def predict(args, model, tokenizer, prefix, tasks):
         logger.info("***** Running evaluation {} *****".format(prefix))
         logger.info("  Num examples = %d", len(eval_dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
-        eval_loss = 0.0
+        #eval_loss = 0.0
         nb_eval_steps = 0
         guids = None
         labels = None
@@ -398,7 +398,7 @@ def predict(args, model, tokenizer, prefix, tasks):
                 tmp_eval_loss, logits = outputs[:2]
                 softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
-                eval_loss += tmp_eval_loss.mean().item()
+                #eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
