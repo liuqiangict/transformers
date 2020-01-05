@@ -382,6 +382,7 @@ def predict(args, model, tokenizer, prefix, tasks):
         nb_eval_steps = 0
         guids = None
         labels = None
+        raw_preds = None
         preds = None
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             model.eval()
@@ -403,18 +404,30 @@ def predict(args, model, tokenizer, prefix, tasks):
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
+                raw_preds = logits.detach().cpu().numpy()
                 preds = softmax_logits.detach().cpu().numpy()
             else:
                 guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
+                raw_preds = np.append(raw_preds, logits.detach().cpu().numpy(), axis=0)
                 preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
 
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
             for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                writer.write(str(guid) 
+                            + '\t' + str(labels[i]) 
+                            + "\t" + str(preds[i][0]) 
+                            + '\t' + str(preds[i][1]) 
+                            + "\t" + str(preds[i][2]) 
+                            + '\t' + str(preds[i][3]) 
+                            + "\t" + str(raw_preds[i][0]) 
+                            + '\t' + str(raw_preds[i][1]) 
+                            + "\t" + str(raw_preds[i][2]) 
+                            + '\t' + str(raw_preds[i][3]) 
+                            + '\n')
 
-        preds = [pred[1] for pred in preds]
+        preds = [1 - pred[0] for pred in preds]
         auc = roc_auc_score(labels, preds)
         print(auc)
         aucs.append(auc)
