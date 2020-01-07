@@ -20,7 +20,7 @@ import logging
 
 import torch
 import torch.nn as nn
-from torch.nn import CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss, MSELoss, BCELoss
 
 from .configuration_roberta import RobertaConfig
 from .file_utils import add_start_docstrings
@@ -390,7 +390,8 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
         if labels is not None:
             if self.num_labels == 1:
                 #  We are doing regression
-                loss_fct = MSELoss()
+                #loss_fct = MSELoss()
+                loss_fct = BCELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = CrossEntropyLoss()
