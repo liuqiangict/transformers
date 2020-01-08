@@ -396,18 +396,18 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
-                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
                 #eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
             else:
                 guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
-                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
