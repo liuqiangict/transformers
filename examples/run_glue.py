@@ -22,12 +22,12 @@ import glob
 import logging
 import os
 import random
+import json
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
 import torch
-from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-                              TensorDataset)
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
 
 try:
@@ -37,37 +37,58 @@ except:
 
 from tqdm import tqdm, trange
 
-from transformers import (WEIGHTS_NAME, BertConfig,
-                                  BertForSequenceClassification, BertTokenizer,
-                                  RobertaConfig,
-                                  RobertaForSequenceClassification,
-                                  RobertaTokenizer,
-                                  XLMConfig, XLMForSequenceClassification,
-                                  XLMTokenizer, XLNetConfig,
-                                  XLNetForSequenceClassification,
-                                  XLNetTokenizer,
-                                  DistilBertConfig,
-                                  DistilBertForSequenceClassification,
-                                  DistilBertTokenizer)
+from transformers import (
+    WEIGHTS_NAME,
+    AdamW,
+    AlbertConfig,
+    AlbertForSequenceClassification,
+    AlbertTokenizer,
+    BertConfig,
+    BertForSequenceClassification,
+    BertTokenizer,
+    DistilBertConfig,
+    DistilBertForSequenceClassification,
+    DistilBertTokenizer,
+    RobertaConfig,
+    RobertaForSequenceClassification,
+    RobertaTokenizer,
+    XLMConfig,
+    XLMForSequenceClassification,
+    XLMRobertaConfig,
+    XLMRobertaForSequenceClassification,
+    XLMRobertaTokenizer,
+    XLMTokenizer,
+    XLNetConfig,
+    XLNetForSequenceClassification,
+    XLNetTokenizer,
+    get_linear_schedule_with_warmup,
+)
 
-from transformers import AdamW, WarmupLinearSchedule
+from transformers import AdamW, get_linear_schedule_with_warmup
 
 from transformers import glue_compute_metrics as compute_metrics
+from transformers import glue_convert_examples_to_features as convert_examples_to_features
 from transformers import glue_output_modes as output_modes
 from transformers import glue_processors as processors
-from transformers import glue_convert_examples_to_features as convert_examples_to_features
 
 logger = logging.getLogger(__name__)
 
-ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, XLNetConfig, XLMConfig, 
-                                                                                RobertaConfig, DistilBertConfig)), ())
+ALL_MODELS = sum(
+    (
+        tuple(conf.pretrained_config_archive_map.keys())
+        for conf in (BertConfig, XLNetConfig, XLMConfig, RobertaConfig, DistilBertConfig)
+    ),
+    (),
+)
 
 MODEL_CLASSES = {
-    'bert': (BertConfig, BertForSequenceClassification, BertTokenizer),
-    'xlnet': (XLNetConfig, XLNetForSequenceClassification, XLNetTokenizer),
-    'xlm': (XLMConfig, XLMForSequenceClassification, XLMTokenizer),
-    'roberta': (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
-    'distilbert': (DistilBertConfig, DistilBertForSequenceClassification, DistilBertTokenizer)
+    "bert": (BertConfig, BertForSequenceClassification, BertTokenizer),
+    "xlnet": (XLNetConfig, XLNetForSequenceClassification, XLNetTokenizer),
+    "xlm": (XLMConfig, XLMForSequenceClassification, XLMTokenizer),
+    "roberta": (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
+    "distilbert": (DistilBertConfig, DistilBertForSequenceClassification, DistilBertTokenizer),
+    "albert": (AlbertConfig, AlbertForSequenceClassification, AlbertTokenizer),
+    "xlmroberta": (XLMRobertaConfig, XLMRobertaForSequenceClassification, XLMRobertaTokenizer),
 }
 
 
@@ -97,11 +118,22 @@ def train(args, train_dataset, model, tokenizer):
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
+        {
+            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "weight_decay": args.weight_decay,
+        },
+        {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
+    ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total)
+    # Check if saved optimizer or scheduler states exist
+    if os.path.isfile(os.path.join(args.model_name_or_path, "optimizer.pt")) and os.path.isfile(
+        os.path.join(args.model_name_or_path, "scheduler.pt")
+    ):
+        # Load in optimizer and scheduler states
+        optimizer.load_state_dict(torch.load(os.path.join(args.model_name_or_path, "optimizer.pt")))
+        scheduler.load_state_dict(torch.load(os.path.join(args.model_name_or_path, "scheduler.pt")))
+
     if args.fp16:
         try:
             from apex import amp
@@ -130,10 +162,26 @@ def train(args, train_dataset, model, tokenizer):
     logger.info("  Total optimization steps = %d", t_total)
 
     global_step = 0
+    epochs_trained = 0
+    steps_trained_in_current_epoch = 0
+    # Check if continuing training from a checkpoint
+    if os.path.exists(args.model_name_or_path):
+        # set global_step to gobal_step of last saved checkpoint from model path
+        global_step = int(args.model_name_or_path.split("-")[-1].split("/")[0])
+        epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
+        steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
+
+        logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+        logger.info("  Continuing training from epoch %d", epochs_trained)
+        logger.info("  Continuing training from global step %d", global_step)
+        logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
-    train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0])
-    set_seed(args)  # Added here for reproductibility (even between python 2 and 3)
+    train_iterator = trange(
+        epochs_trained, int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]
+    )
+    set_seed(args)  # Added here for reproductibility
     for _ in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
         for step, batch in enumerate(epoch_iterator):
@@ -169,13 +217,22 @@ def train(args, train_dataset, model, tokenizer):
 
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Log metrics
-                    if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results = evaluate(args, model, tokenizer)
-                        for key, value in results.items():
-                            tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
-                    tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
-                    tb_writer.add_scalar('loss', (tr_loss - logging_loss)/args.logging_steps, global_step)
+                    #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+                    logs = {}
+                    results = evaluate(args, model, tokenizer, str(global_step))
+                    for key, value in results.items():
+                        eval_key = "eval_{}".format(key)
+                        logs[eval_key] = value
+
+                    loss_scalar = (tr_loss - logging_loss) / args.logging_steps
+                    learning_rate_scalar = scheduler.get_lr()[0]
+                    logs["learning_rate"] = learning_rate_scalar
+                    logs["loss"] = loss_scalar
                     logging_loss = tr_loss
+
+                    for key, value in logs.items():
+                        tb_writer.add_scalar(key, value, global_step)
+                    print(json.dumps({**logs, **{"step": global_step}}))
 
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                     # Save model checkpoint
@@ -184,13 +241,14 @@ def train(args, train_dataset, model, tokenizer):
                         os.makedirs(output_dir)
                     model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
                     model_to_save.save_pretrained(output_dir)
+                    tokenizer.save_pretrained(output_dir)
+
                     torch.save(args, os.path.join(output_dir, 'training_args.bin'))
                     logger.info("Saving model checkpoint to %s", output_dir)
 
-            if args.tpu:
-                args.xla_model.optimizer_step(optimizer, barrier=True)
-                model.zero_grad()
-                global_step += 1
+                    torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+                    torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                    logger.info("Saving optimizer and scheduler states to %s", output_dir)
 
             if args.max_steps > 0 and global_step > args.max_steps:
                 epoch_iterator.close()
@@ -201,10 +259,15 @@ def train(args, train_dataset, model, tokenizer):
 
         if args.local_rank in [-1, 0]:
             # Log metrics
-            if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                results = evaluate(args, model, tokenizer)
-                for key, value in results.items():
-                    tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
+            #if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
+            logs = {}
+            results = evaluate(args, model, tokenizer, str(global_step))
+            for key, value in results.items():
+                eval_key = "eval_{}".format(key)
+                logs[eval_key] = value
+            for key, value in logs.items():
+                tb_writer.add_scalar(key, value, global_step)
+                print(json.dumps({**logs, **{"step": global_step}}))
 
         if args.local_rank in [-1, 0]:
             output_dir = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
@@ -212,8 +275,14 @@ def train(args, train_dataset, model, tokenizer):
                 os.makedirs(output_dir)
             model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
             model_to_save.save_pretrained(output_dir)
+            tokenizer.save_pretrained(output_dir)
+
             torch.save(args, os.path.join(output_dir, 'training_args.bin'))
             logger.info("Saving model checkpoint to %s", output_dir)
+
+            torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+            torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+            logger.info("Saving optimizer and scheduler states to %s", output_dir)
 
     if args.local_rank in [-1, 0]:
         tb_writer.close()
@@ -275,8 +344,10 @@ def evaluate(args, model, tokenizer, prefix=""):
             preds = np.squeeze(preds)
         result = compute_metrics(eval_task, preds, out_label_ids)
         results.update(result)
+        auc = roc_auc_score(out_label_ids, preds)
+        results["roc_auc_sp"] = auc
 
-        output_eval_file = os.path.join(eval_output_dir, prefix, "eval_results.txt")
+        output_eval_file = os.path.join(eval_output_dir, "eval_results_" + prefix + ".txt")
         with open(output_eval_file, "w") as writer:
             logger.info("***** Eval results {} *****".format(prefix))
             for key in sorted(result.keys()):
@@ -323,14 +394,19 @@ def predict(args, model, tokenizer, prefix, tasks):
                     outputs = model(**inputs)
                     #tmp_eval_loss, logits = outputs[:2]
                     logits = outputs[0]
-                    #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                    softmax_logits = torch.nn.functional.softmax(logits, dim=1)
                     
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
                 preds = logits.detach().cpu().numpy()
-                #preds = softmax_logits.detach().cpu().numpy()
+                soft_preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
-                    writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][0]) +'\n' )
+                    writer.write(str(guid)
+                                    + '\t' + str(preds[i][0]) 
+                                    + '\t' + str(preds[i][1]) 
+                                    + '\t' + str(soft_preds[i][0]) 
+                                    + '\t' + str(soft_preds[i][1]) 
+                                    +'\n' )
                 processed += 1
                 if processed % 1000 == 0:
                     print("Processed ", (processed * args.eval_batch_size), " cases.")
@@ -350,14 +426,15 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, eval_dir=None
         data_dir = args.input_eval_dir if evaluate else args.input_train_dir
     else:
         data_dir = eval_dir
-    #cached_features_file = os.path.join(data_dir, 'cached_{}_{}_{}_{}_{}'.format(
-    #cached_features_file = os.path.join('./data/predict_l4_24_tf_records/', 'cached_{}_{}_{}_{}_{}'.format(
-    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}_{}'.format(
-        eval_name if eval_name != None else 'data',
+    if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        os.makedirs(args.output_dir)
+
+    cached_features_file = os.path.join(args.output_dir, 'cached_{}_{}_{}_{}'.format(
         'dev' if evaluate else 'train',
         list(filter(None, args.model_name_or_path.split('/'))).pop(),
         str(args.max_seq_length),
-        str(task)))
+        str(task) + (("_" + eval_name) if eval_name else "")
+        ))
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -571,6 +648,9 @@ def main():
 
     logger.info("Training/evaluation parameters %s", args)
 
+    # Create output directory if needed
+    if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+        os.makedirs(args.output_dir)
 
     # Training
     if args.do_train:
@@ -581,9 +661,6 @@ def main():
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0) and not args.tpu:
-        # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
-            os.makedirs(args.output_dir)
 
         logger.info("Saving model checkpoint to %s", args.output_dir)
         # Save a trained model, configuration and tokenizer using `save_pretrained()`.
@@ -628,9 +705,11 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    #('qp', 'google', './data/eval/google/'),
-                    #('qp', 'bing_ann', './data/eval/bing_ann/'),
-                    #('qp', 'uhrs', './data/eval/uhrs/'),
+                    #('qp', 'google', './data/Universial/eval/google/'),
+                    #('qp', 'bing_ann', './data/Universial/eval/bing_ann/'),
+                    #('qp', 'uhrs', './data/Universial/eval/uhrs/'),
+                    #('qp', 'de_de', './data/Universial/eval/de_de/'),
+                    #('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
                     #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
