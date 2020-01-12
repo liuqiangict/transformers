@@ -402,6 +402,7 @@ def predict(args, model, tokenizer, prefix, tasks):
                 soft_preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
                     writer.write(str(guid)
+                                    #+ '\t' + str(labels[i]) 
                                     + '\t' + str(preds[i][0]) 
                                     + '\t' + str(preds[i][1]) 
                                     + '\t' + str(soft_preds[i][0]) 
@@ -723,7 +724,7 @@ def main():
                     #('qp', 'sbs', './data/Caption/sbs/eval/pointwise/sbs_sep_2019.pointwise.dev.tsv'),
                     #('qp', 'malta', './data/Caption/Malta/eval/pointwise/malta.pointwise.dev.tsv'),
                     #('qp', 'maroc', './data/Caption/Marco/eval/pointwise/marco.pointwise.dev.tsv'),
-                    ('qp', 'L4_20_' + args.predict_number, './data/Caption/predict/sbs/l4_20_20/' + args.predict_number),
+                    ('qp', 'image_' + args.predict_number, './data/image_score/80/' + args.predict_number),
 
                 ]
         for checkpoint in checkpoints:
