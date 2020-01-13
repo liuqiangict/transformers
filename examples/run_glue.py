@@ -71,6 +71,8 @@ from transformers import glue_convert_examples_to_features as convert_examples_t
 from transformers import glue_output_modes as output_modes
 from transformers import glue_processors as processors
 
+from data_loader import QADataset, QueryPassageFineTuningDataset
+
 logger = logging.getLogger(__name__)
 
 ALL_MODELS = sum(
@@ -100,14 +102,19 @@ def set_seed(args):
         torch.cuda.manual_seed_all(args.seed)
 
 
-def train(args, train_dataset, model, tokenizer):
+#def train(args, train_dataset, model, tokenizer):
+def train(args, model, tokenizer):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
 
+    train_examples = QueryPassageFineTuningDataset(args.input_train_dir, mode='train')
+    train_dataset = QADataset(tokenizer, train_examples, args.max_seq_length)
+
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
     train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
+
 
     if args.max_steps > 0:
         t_total = args.max_steps
@@ -667,8 +674,9 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
-        global_step, tr_loss = train(args, train_dataset, model, tokenizer)
+        #train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
+        #global_step, tr_loss = train(args, train_dataset, model, tokenizer)
+        global_step, tr_loss = train(args, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
 

@@ -79,6 +79,8 @@ if _has_sklearn:
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "qp":
             return {"acc": simple_accuracy(preds, labels), "roc": cal_roc_auc_score(preds, labels)}
+        elif task_name == "qp_distill":
+            return {"acc": simple_accuracy(preds, labels), "roc": cal_roc_auc_score(preds, labels)}
         else:
             raise KeyError(task_name)
 

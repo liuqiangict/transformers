@@ -542,7 +542,7 @@ class QPProcessor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return ["0", "1"]
+        return ["1"]
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -571,6 +571,7 @@ glue_tasks_num_labels = {
     "rte": 2,
     "wnli": 2,
     "qp": 2,
+    "qp_distill": 1,
 }
 
 glue_processors = {
@@ -585,6 +586,7 @@ glue_processors = {
     "rte": RteProcessor,
     "wnli": WnliProcessor,
     "qp": QPProcessor,
+    "qp_distill": QPProcessor, 
 }
 
 glue_output_modes = {
@@ -599,4 +601,5 @@ glue_output_modes = {
     "rte": "classification",
     "wnli": "classification",
     "qp": "classification",
+    "qp_distill": "regression",
 }
