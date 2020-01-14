@@ -360,6 +360,7 @@ class RobertaForSequenceClassification(BertPreTrainedModel):
 
     def __init__(self, config):
         super(RobertaForSequenceClassification, self).__init__(config)
+        config.num_labels = 1
         self.num_labels = config.num_labels
 
         self.roberta = RobertaModel(config)
