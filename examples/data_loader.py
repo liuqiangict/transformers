@@ -96,7 +96,7 @@ class QADataset(Dataset):
         pad_token_segment_id=0
         mask_padding_with_zero = True
 
-        guid, query, passage, nlr_score, xlnet_score, roberta_score, turing_roberta_score, albert_score = self.data.all_pairs[i]
+        guid, query, passage, ori_label, turing_score, quantus_score, malta_score, marco_score, sbs_score = self.data.all_pairs[i]
         inputs = self.tokenizer.encode_plus(
             query,
             passage,
@@ -125,9 +125,11 @@ class QADataset(Dataset):
         #token_type_ids = map_to_torch([int(id) for id in str_token_type_ids.split(';')])
         token_type_ids = map_to_torch(token_type_ids)
         #label = map_to_torch_float([float(la) for la in str_label.split(';')])
-        label = map_to_torch_float([float(la) for la in [nlr_score, xlnet_score, roberta_score, turing_roberta_score, albert_score]])
+        #sbs_score = str((float(ori_label) + float(sbs_score)) / 2.0)
+        #label = map_to_torch_float([float(la) for la in [turing_score, quantus_score, malta_score, marco_score, sbs_score]])
+        label = map_to_torch_float([float(la) for la in [quantus_score, quantus_score, malta_score, marco_score, sbs_score]])
 
-        weights = map_to_torch_float([float(la) for la in [1.0, 1.0, 1.0, 1.0, 8.0]])
+        weights = map_to_torch_float([float(la) for la in [1.0, 1.0, 1.0, 1.0, 1.0]])
 
         return tuple([guid, input_ids, attention_mask, token_type_ids, label, weights])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)
@@ -139,7 +141,7 @@ class QueryPassageFineTuningDataset:
             for i, line in enumerate(tqdm(fd)):
                 line = line.replace('\n', '')
                 entities = line.split('\t')
-                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6], entities[7]])
+                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6], entities[7], entities[8]])
                 all_pairs.append(data)
                 if i > readin:
                     break
