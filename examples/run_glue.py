@@ -583,6 +583,7 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
+    parser.add_argument('--predict_number', type=str, default='', help="For distant debugging.")
     args = parser.parse_args()
 
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
@@ -727,8 +728,9 @@ def main():
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
-                    ('qp', 'sbs_train', './data/Caption/distill/sbs_data/source_data/train/'),
-                    ('qp', 'sbs_eval', './data/Caption/distill/sbs_data/source_data/eval/'),
+                    #('qp', 'sbs_train', './data/Caption/distill/sbs_data/source_data/train/'),
+                    #('qp', 'sbs_eval', './data/Caption/distill/sbs_data/source_data/eval/'),
+                    ('qp', 'sbs_train_' + args.predict_number, './data/Caption/distill/sbs_data/source_data/train_4/' + args.predict_number),
 
                 ]
         output_file = os.path.join(args.output_dir, "auc_result.tsv")
