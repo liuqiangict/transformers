@@ -537,8 +537,8 @@ class QPProcessor(DataProcessor):
     def get_dev_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv_from_dir(data_dir), "dev")
-            #self._read_tsv(data_dir), "dev")
+            #self._read_tsv_from_dir(data_dir), "dev")
+            self._read_tsv(data_dir), "dev")
 
     def get_labels(self):
         """See base class."""
