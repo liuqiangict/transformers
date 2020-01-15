@@ -126,10 +126,10 @@ class QADataset(Dataset):
         token_type_ids = map_to_torch(token_type_ids)
         #label = map_to_torch_float([float(la) for la in str_label.split(';')])
         #sbs_score = str((float(ori_label) + float(sbs_score)) / 2.0)
-        #label = map_to_torch_float([float(la) for la in [turing_score, quantus_score, malta_score, marco_score, sbs_score]])
-        label = map_to_torch_float([float(la) for la in [quantus_score, quantus_score, malta_score, marco_score, sbs_score]])
+        label = map_to_torch_float([float(la) for la in [turing_score, quantus_score, malta_score, marco_score, sbs_score]])
+        #label = map_to_torch_float([float(la) for la in [quantus_score, quantus_score, malta_score, marco_score, sbs_score]])
 
-        weights = map_to_torch_float([float(la) for la in [1.0, 1.0, 1.0, 1.0, 1.0]])
+        weights = map_to_torch_float([float(la) for la in [1.0, 1.0, 1.0, 1.0, 4.0]])
 
         return tuple([guid, input_ids, attention_mask, token_type_ids, label, weights])
         #return InputFeatures(guids=guid, input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label)
