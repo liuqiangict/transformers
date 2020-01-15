@@ -730,7 +730,9 @@ def main():
                     #('qp', './data/eval/speller_usertyped/')
                     #('qp', 'sbs_train', './data/Caption/distill/sbs_data/source_data/train/'),
                     #('qp', 'sbs_eval', './data/Caption/distill/sbs_data/source_data/eval/'),
-                    ('qp', 'sbs_train_' + args.predict_number, './data/Caption/distill/quantus_data/source_data/train_4/' + args.predict_number),
+                    #('qp', 'sbs_train_' + args.predict_number, './data/Caption/distill/quantus_data/source_data/train_4/' + args.predict_number),
+                    ('qp', 'sbs_train_' + args.predict_number, './data/Caption/distill/malta_data/source_data/train_4/' + args.predict_number),
+                    #('qp', 'sbs_train_' + args.predict_number, './data/Caption/distill/malta_data/marco_data/train_4/' + args.predict_number),
                     #('qp', 'sbs_eval', './data/Caption/distill/sbs_data/source_data/eval/'),
 
                 ]
