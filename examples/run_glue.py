@@ -682,16 +682,14 @@ def main():
                     ('qp_multi_target', 'google', './data/eval/google/'),
                     ('qp_multi_target', 'bing_ann', './data/eval/bing_ann/'),
                     ('qp_multi_target', 'uhrs', './data/eval/uhrs/'),
-                    ('qp_multi_target', 'panelone_5k', './data/eval/panelone_5k/'),
-                    ('qp_multi_target', 'adverserial', './data/eval/adverserial/'),
+                    #('qp_multi_target', 'panelone_5k', './data/eval/panelone_5k/'),
+                    #('qp_multi_target', 'adverserial', './data/eval/adverserial/'),
                     
                     ('qp_multi_target', 'malta', './data/Caption/Malta/eval/pointwise/'),
                     ('qp_multi_target', 'marco', './data/Caption/Marco/eval/pointwise/'),
                     ('qp_multi_target', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/'),
                     ('qp_multi_target', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/'),
                     ('qp_multi_target', 'sbs', './data/Caption/sbs/eval/pointwise/'),
-                    #('qp', './data/eval/speller_checked/'),
-                    #('qp', './data/eval/speller_usertyped/')
                 ]
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
