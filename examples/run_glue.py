@@ -403,25 +403,25 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
-                softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
                 #eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
             if preds is None:
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
-                preds = softmax_logits.detach().cpu().numpy()
+                preds = logits.detach().cpu().numpy()
             else:
                 guids = np.append(guids, batch[0].detach().cpu().numpy(), axis=0)
                 labels = np.append(labels, inputs['labels'].detach().cpu().numpy(), axis=0)
-                preds = np.append(preds, softmax_logits.detach().cpu().numpy(), axis=0)
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
         output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
         with open(output_eval_file, "w") as writer:
             for i, guid in enumerate(guids):
-                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][0]) +'\n' )
 
-        preds = [pred[1] for pred in preds]
+        preds = [pred[0] for pred in preds]
         auc = roc_auc_score(labels, preds)
         print(auc)
         aucs.append(auc)
@@ -726,11 +726,11 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', './data/Universial/eval/google/'),
-                    ('qp', 'bing_ann', './data/Universial/eval/bing_ann/'),
-                    ('qp', 'uhrs', './data/Universial/eval/uhrs/'),
-                    ('qp', 'de_de', './data/Universial/eval/de_de/'),
-                    ('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
+                    ('qp_distill', 'google', './data/Universial/eval/google/'),
+                    ('qp_distill', 'bing_ann', './data/Universial/eval/bing_ann/'),
+                    ('qp_distill', 'uhrs', './data/Universial/eval/uhrs/'),
+                    ('qp_distill', 'de_de', './data/Universial/eval/de_de/'),
+                    ('qp_distill', 'fr_fr', './data/Universial/eval/fr_fr/'),
                     #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
