@@ -96,7 +96,8 @@ class QADataset(Dataset):
         pad_token_segment_id=0
         mask_padding_with_zero = True
 
-        guid, query, passage, raw_negative_logits, raw_positive_logits, softmax_negative_logits, softmax_positive_logits = self.data.all_pairs[i]
+        #guid, query, passage, raw_negative_logits, raw_positive_logits, softmax_negative_logits, softmax_positive_logits = self.data.all_pairs[i]
+        guid, query, passage, softmax_positive_logits = self.data.all_pairs[i]
         inputs = self.tokenizer.encode_plus(
             query,
             passage,
@@ -139,7 +140,8 @@ class QueryPassageFineTuningDataset:
             for i, line in enumerate(tqdm(fd)):
                 line = line.replace('\n', '')
                 entities = line.split('\t')
-                data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6]])
+                #data = tuple([entities[0], entities[1], entities[2], entities[3], entities[4], entities[5], entities[6]])
+                data = tuple([entities[0], entities[1], entities[2], entities[3]])
                 all_pairs.append(data)
                 if i > readin:
                     break
