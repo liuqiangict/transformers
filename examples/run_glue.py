@@ -725,7 +725,7 @@ def main():
                     #('qp', 'malta', './data/Caption/Malta/eval/pointwise/malta.pointwise.dev.tsv'),
                     #('qp', 'maroc', './data/Caption/Marco/eval/pointwise/marco.pointwise.dev.tsv'),
                     #('qp', 'image_' + args.predict_number, './data/image_score/80/' + args.predict_number),
-                    ('qp', 'universial_' + args.predict_number, './data/universial_score/80/' + args.predict_number),
+                    ('qp', 'deepvote_' + args.predict_number, './data/Deepvote/source_data/' + args.predict_number),
 
                 ]
         for checkpoint in checkpoints:
