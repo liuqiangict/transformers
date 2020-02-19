@@ -398,15 +398,18 @@ def predict(args, model, tokenizer, prefix, tasks):
 
                     outputs = model(**inputs)
                     tmp_eval_loss, logits = outputs[:2]
-                    #softmax_logits = torch.nn.functional.softmax(logits, dim=1)
+                    softmax_logits = torch.nn.functional.softmax(logits, dim=1)
 
-                    eval_loss += tmp_eval_loss.mean().item()
+                    #eval_loss += tmp_eval_loss.mean().item()
                 nb_eval_steps += 1
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
                 preds = logits.detach().cpu().numpy()
+                softmax_preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
-                    writer.write(str(guid) + '\t' + str(labels[i]) + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) +'\n' )
+                    writer.write(str(guid) + '\t' + str(labels[i])
+                                + "\t" + str(preds[i][0]) + '\t' + str(preds[i][1]) 
+                                + "\t" + str(softmax_preds[i][0]) + '\t' + str(softmax_preds[i][1]) + '\n')
 
     return aucs
 
@@ -713,7 +716,7 @@ def main():
                     #('qp', 'adverserial', './data/eval/adverserial/'),
                     #('qp', './data/eval/speller_checked/'),
                     #('qp', './data/eval/speller_usertyped/')
-                    ('qp', 'intermediate_' + args.predict_number, './data/intermediateData/24/' + args.predict_number)
+                    ('qp', 'l4_' + args.predict_number, './data/l4/l4_20/' + args.predict_number)
                 ]
         #output_file = os.path.join(args.output_dir, "auc_result.tsv")
         #with open(output_file, "a") as writer:
