@@ -726,9 +726,9 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp_distill', 'google', './data/eval/google/'),
+                    #('qp_distill', 'google', './data/eval/google/'),
                     ('qp_distill', 'bing_ann', './data/eval/bing_ann/'),
-                    ('qp_distill', 'uhrs', './data/eval/uhrs/'),
+                    #('qp_distill', 'uhrs', './data/eval/uhrs/'),
                     #('qp_distill', 'de_de', './data/Universial/eval/de_de/'),
                     #('qp_distill', 'fr_fr', './data/Universial/eval/fr_fr/'),
                     #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
