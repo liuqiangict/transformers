@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+
+import copy
 import csv
 import dataclasses
 import json
@@ -68,7 +72,7 @@ class InputFeatures:
         label: (Optional) Label corresponding to the input. Int for classification problems,
             float for regression problems.
     """
-
+    guids: str
     input_ids: List[int]
     attention_mask: Optional[List[int]] = None
     token_type_ids: Optional[List[int]] = None
@@ -304,7 +308,7 @@ class SingleSentenceClassificationProcessor(DataProcessor):
                 logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
                 logger.info("label: %s (id = %d)" % (example.label, label))
 
-            features.append(InputFeatures(input_ids=input_ids, attention_mask=attention_mask, label=label))
+            features.append(InputFeatures(guids=example.guid, input_ids=input_ids, attention_mask=attention_mask, label=label))
 
         if return_tensors is None:
             return features
@@ -315,12 +319,12 @@ class SingleSentenceClassificationProcessor(DataProcessor):
 
             def gen():
                 for ex in features:
-                    yield ({"input_ids": ex.input_ids, "attention_mask": ex.attention_mask}, ex.label)
+                    yield ({"guids": ex.guid, "input_ids": ex.input_ids, "attention_mask": ex.attention_mask}, ex.label)
 
             dataset = tf.data.Dataset.from_generator(
                 gen,
-                ({"input_ids": tf.int32, "attention_mask": tf.int32}, tf.int64),
-                ({"input_ids": tf.TensorShape([None]), "attention_mask": tf.TensorShape([None])}, tf.TensorShape([])),
+                ({"guids": tf.int32, "input_ids": tf.int32, "attention_mask": tf.int32}, tf.int64),
+                ({"guids": tf.TensorShape([None]), "input_ids": tf.TensorShape([None]), "attention_mask": tf.TensorShape([None])}, tf.TensorShape([])),
             )
             return dataset
         elif return_tensors == "pt":
@@ -329,6 +333,7 @@ class SingleSentenceClassificationProcessor(DataProcessor):
             import torch
             from torch.utils.data import TensorDataset
 
+            all_guids = torch.tensor([f.guid for f in features], dtype=torch.long)
             all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
             all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
             if self.mode == "classification":
@@ -336,7 +341,7 @@ class SingleSentenceClassificationProcessor(DataProcessor):
             elif self.mode == "regression":
                 all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
-            dataset = TensorDataset(all_input_ids, all_attention_mask, all_labels)
+            dataset = TensorDataset(all_guids, all_input_ids, all_attention_mask, all_labels)
             return dataset
         else:
             raise ValueError("return_tensors should be one of 'tf' or 'pt'")
