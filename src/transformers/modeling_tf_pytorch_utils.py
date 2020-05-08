@@ -122,7 +122,7 @@ def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, a
         tf_inputs = tf_model.dummy_inputs
 
     if tf_inputs is not None:
-        tfo = tf_model(tf_inputs, training=False)  # Make sure model is built
+        tf_model(tf_inputs, training=False)  # Make sure model is built
 
     # Adapt state dict - TODO remove this and update the AWS weights files instead
     # Convert old format to new format if needed from a PyTorch state_dict
@@ -160,6 +160,7 @@ def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, a
         if name not in pt_state_dict:
             if allow_missing_keys:
                 continue
+
             raise AttributeError("{} not found in PyTorch model".format(name))
 
         array = pt_state_dict[name].numpy()
@@ -187,7 +188,7 @@ def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, a
     K.batch_set_value(weight_value_tuples)
 
     if tf_inputs is not None:
-        tfo = tf_model(tf_inputs, training=False)  # Make sure restore ops are run
+        tf_model(tf_inputs, training=False)  # Make sure restore ops are run
 
     logger.info("Loaded {:,} parameters in the TF 2.0 model.".format(tf_loaded_numel))
 
@@ -218,7 +219,6 @@ def load_tf2_checkpoint_in_pytorch_model(pt_model, tf_checkpoint_path, tf_inputs
 
     import transformers
 
-    tf_path = os.path.abspath(tf_checkpoint_path)
     logger.info("Loading TensorFlow weights from {}".format(tf_checkpoint_path))
 
     # Instantiate and load the associated TF 2.0 model
@@ -230,7 +230,7 @@ def load_tf2_checkpoint_in_pytorch_model(pt_model, tf_checkpoint_path, tf_inputs
         tf_inputs = tf_model.dummy_inputs
 
     if tf_inputs is not None:
-        tfo = tf_model(tf_inputs, training=False)  # Make sure model is built
+        tf_model(tf_inputs, training=False)  # Make sure model is built
 
     tf_model.load_weights(tf_checkpoint_path, by_name=True)
 
@@ -289,6 +289,7 @@ def load_tf2_weights_in_pytorch_model(pt_model, tf_weights, allow_missing_keys=F
             if allow_missing_keys:
                 missing_keys_pt.append(pt_weight_name)
                 continue
+
             raise AttributeError("{} not found in TF 2.0 model".format(pt_weight_name))
 
         array, transpose = tf_weights_map[pt_weight_name]

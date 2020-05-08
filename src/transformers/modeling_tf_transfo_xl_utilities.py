@@ -24,7 +24,7 @@ from .modeling_tf_utils import shape_list
 
 class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
     def __init__(self, vocab_size, d_embed, d_proj, cutoffs, div_val=1, keep_order=False, **kwargs):
-        super(TFAdaptiveSoftmaxMask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.vocab_size = vocab_size
         self.d_embed = d_embed
@@ -98,7 +98,7 @@ class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
                     name="out_layers_._{}_._bias".format(i),
                 )
                 self.out_layers.append((weight, bias))
-        super(TFAdaptiveSoftmaxMask, self).build(input_shape)
+        super().build(input_shape)
 
     @staticmethod
     def _logit(x, W, b, proj=None):
@@ -118,7 +118,6 @@ class TFAdaptiveSoftmaxMask(tf.keras.layers.Layer):
         hidden, target = inputs
         head_logprob = 0
         if self.n_clusters == 0:
-            softmax_b = tf.get_variable("bias", [self.config.vocab_size], initializer=tf.zeros_initializer())
             output = self._logit(hidden, self.out_layers[0][0], self.out_layers[0][1], self.out_projs[0])
             if target is not None:
                 loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=target, logits=output)

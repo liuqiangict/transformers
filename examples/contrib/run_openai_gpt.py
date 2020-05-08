@@ -44,12 +44,9 @@ from transformers import (
     AdamW,
     OpenAIGPTDoubleHeadsModel,
     OpenAIGPTTokenizer,
-    cached_path,
     get_linear_schedule_with_warmup,
 )
 
-
-ROCSTORIES_URL = "https://s3.amazonaws.com/datasets.huggingface.co/ROCStories.tar.gz"
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s", datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO
@@ -182,9 +179,6 @@ def main():
     model.to(device)
 
     # Load and encode the datasets
-    if not args.train_dataset and not args.eval_dataset:
-        roc_stories = cached_path(ROCSTORIES_URL)
-
     def tokenize_and_encode(obj):
         """ Tokenize and encode a nested object """
         if isinstance(obj, str):
@@ -255,8 +249,8 @@ def main():
                 losses = model(input_ids, mc_token_ids=mc_token_ids, lm_labels=lm_labels, mc_labels=mc_labels)
                 loss = args.lm_coef * losses[0] + losses[1]
                 loss.backward()
-                scheduler.step()
                 optimizer.step()
+                scheduler.step()
                 optimizer.zero_grad()
                 tr_loss += loss.item()
                 exp_average_loss = (

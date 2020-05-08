@@ -14,24 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import csv
-import sys
-
 try:
     from scipy.stats import pearsonr, spearmanr
-    from sklearn.metrics import matthews_corrcoef, f1_score, roc_auc_score
+    from sklearn.metrics import matthews_corrcoef, f1_score
+
     _has_sklearn = True
-except (AttributeError, ImportError) as e:
+except (AttributeError, ImportError):
     _has_sklearn = False
+
 
 def is_sklearn_available():
     return _has_sklearn
+
 
 if _has_sklearn:
 
     def simple_accuracy(preds, labels):
         return (preds == labels).mean()
-
 
     def acc_and_f1(preds, labels):
         acc = simple_accuracy(preds, labels)
@@ -42,7 +41,6 @@ if _has_sklearn:
             "acc_and_f1": (acc + f1) / 2,
         }
 
-
     def pearson_and_spearman(preds, labels):
         pearson_corr = pearsonr(preds, labels)[0]
         spearman_corr = spearmanr(preds, labels)[0]
@@ -51,9 +49,6 @@ if _has_sklearn:
             "spearmanr": spearman_corr,
             "corr": (pearson_corr + spearman_corr) / 2,
         }
-
-    def cal_roc_auc_score(preds, labels):
-        return roc_auc_score(labels, preds)
 
     def glue_compute_metrics(task_name, preds, labels):
         assert len(preds) == len(labels)
@@ -77,11 +72,10 @@ if _has_sklearn:
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "wnli":
             return {"acc": simple_accuracy(preds, labels)}
-        elif task_name == "qp":
-            return {"acc": simple_accuracy(preds, labels), "roc": cal_roc_auc_score(preds, labels)}
+        elif task_name == "hans":
+            return {"acc": simple_accuracy(preds, labels)}
         else:
             raise KeyError(task_name)
-
 
     def xnli_compute_metrics(task_name, preds, labels):
         assert len(preds) == len(labels)
