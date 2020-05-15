@@ -119,6 +119,24 @@ class DataProcessor:
         with open(input_file, "r", encoding="utf-8-sig") as f:
             return list(csv.reader(f, delimiter="\t", quotechar=quotechar))
 
+    @classmethod
+    def _read_tsv_from_dir(cls, input_dir, quotechar=None):
+        """Reads a tab separated value file."""
+        
+        input_files = [file for file in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, file))]
+        lines = []
+        for input_file in input_files:
+            if input_file.startswith('cache'):
+                continue
+            with open(os.path.join(input_dir, input_file), "r", encoding="utf-8-sig") as f:
+                reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+                for line in reader:
+                    if sys.version_info[0] == 2:
+                        line = list(unicode(cell, 'utf-8') for cell in line)
+                    lines.append(line)
+        return lines
+
+
 
 class SingleSentenceClassificationProcessor(DataProcessor):
     """ Generic processor for a single sentence classification data set."""

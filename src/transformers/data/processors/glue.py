@@ -60,6 +60,7 @@ def glue_convert_examples_to_features(
         if task is None:
             raise ValueError("When calling glue_convert_examples_to_features from TF, the task parameter is required.")
         return _tf_glue_convert_examples_to_features(examples, tokenizer, max_length=max_length, task=task)
+
     return _glue_convert_examples_to_features(
         examples, tokenizer, max_length=max_length, task=task, label_list=label_list, output_mode=output_mode
     )
@@ -141,22 +142,23 @@ def _glue_convert_examples_to_features(
         [(example.text_a, example.text_b) for example in examples], max_length=max_length, pad_to_max_length=True,
     )
 
-    features = []
-    for i in range(len(examples)):
-        inputs = {k: batch_encoding[k][i] for k in batch_encoding}
-
-        feature = InputFeatures(**inputs, label=labels[i])
-        features.append(feature)
-
     for i, example in enumerate(examples[:5]):
         logger.info("*** Example ***")
         logger.info("guid: %s" % (example.guid))
         logger.info("text_a: %s" % (example.text_a))
         logger.info("text_b: %s" % (example.text_b))
-        logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
-        logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-        logger.info("label: %s (id = %d)" % (example.label, label))
+        logger.info("input_ids: %s" % " ".join([str(x) for x in batch_encoding['input_ids'][i]]))
+        logger.info("attention_mask: %s" % " ".join([str(x) for x in batch_encoding['attention_mask'][i]]))
+        if 'token_type_ids' in batch_encoding.keys():
+            logger.info("token_type_ids: %s" % " ".join([str(x) for x in batch_encoding['token_type_ids'][i]]))
+        logger.info("label: %s (id = %d)" % (example.label, labels[i]))
+
+    features = []
+    for i, exmple in enumerate(examples):
+        inputs = {k: batch_encoding[k][i] for k in batch_encoding}
+
+        feature = InputFeatures(guids=example.guid, **inputs, label=labels[i])
+        features.append(feature)
 
     return features
 

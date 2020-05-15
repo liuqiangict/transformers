@@ -29,9 +29,8 @@ class GlueDataTrainingArguments:
     """
 
     task_name: str = field(metadata={"help": "The name of the task to train on: " + ", ".join(glue_processors.keys())})
-    data_dir: str = field(
-        metadata={"help": "The input data dir. Should contain the .tsv files (or other data files) for the task."}
-    )
+    input_train_dir: str = field(metadata={"help": "The input training data dir."})
+    input_eval_dir: str = field(metadata={"help": "The input evaluation data dir."})
     max_seq_length: int = field(
         default=128,
         metadata={
@@ -70,7 +69,7 @@ class GlueDataset(Dataset):
         self.output_mode = glue_output_modes[args.task_name]
         # Load data features from cache or dataset file
         cached_features_file = os.path.join(
-            args.data_dir,
+            args.input_eval_dir if evaluate else args.input_train_dir,
             "cached_{}_{}_{}_{}".format(
                 "dev" if evaluate else "train", tokenizer.__class__.__name__, str(args.max_seq_length), args.task_name,
             ),
@@ -86,7 +85,7 @@ class GlueDataset(Dataset):
                     f"Loading features from cached file {cached_features_file} [took %.3f s]", time.time() - start
                 )
             else:
-                logger.info(f"Creating features from dataset file at {args.data_dir}")
+                logger.info(f"Creating features from dataset file at {args.input_eval_dir if evaluate else args.input_train_dir}")
                 label_list = processor.get_labels()
                 if args.task_name in ["mnli", "mnli-mm"] and tokenizer.__class__ in (
                     RobertaTokenizer,
@@ -96,9 +95,9 @@ class GlueDataset(Dataset):
                     # HACK(label indices are swapped in RoBERTa pretrained model)
                     label_list[1], label_list[2] = label_list[2], label_list[1]
                 examples = (
-                    processor.get_dev_examples(args.data_dir)
+                    processor.get_dev_examples(args.input_eval_dir)
                     if evaluate
-                    else processor.get_train_examples(args.data_dir)
+                    else processor.get_train_examples(args.input_train_dir)
                 )
                 if limit_length is not None:
                     examples = examples[:limit_length]

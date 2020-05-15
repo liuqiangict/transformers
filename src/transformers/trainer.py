@@ -149,7 +149,7 @@ class Trainer:
         if tb_writer is not None:
             self.tb_writer = tb_writer
         elif is_tensorboard_available() and self.args.local_rank in [-1, 0]:
-            self.tb_writer = SummaryWriter(log_dir=self.args.logging_dir)
+            self.tb_writer = SummaryWriter(self.args.logging_dir)
         if not is_tensorboard_available():
             logger.warning(
                 "You are instantiating a Trainer but Tensorboard is not installed. You should consider installing it."
@@ -320,7 +320,7 @@ class Trainer:
 
         if self.tb_writer is not None:
             self.tb_writer.add_text("args", self.args.to_json_string())
-            self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
+            #self.tb_writer.add_hparams(self.args.to_sanitized_dict(), metric_dict={})
         if is_wandb_available():
             self._setup_wandb()
 
@@ -412,7 +412,7 @@ class Trainer:
                                     logs[eval_key] = value
 
                             loss_scalar = (tr_loss - logging_loss) / self.args.logging_steps
-                            learning_rate_scalar = scheduler.get_last_lr()[0]
+                            learning_rate_scalar = scheduler.get_lr()[0]
                             logs["learning_rate"] = learning_rate_scalar
                             logs["loss"] = loss_scalar
                             logging_loss = tr_loss
@@ -444,6 +444,27 @@ class Trainer:
                 if self.args.max_steps > 0 and global_step > self.args.max_steps:
                     epoch_iterator.close()
                     break
+
+
+            if self.is_local_master():
+                logs = {}
+                results = self.evaluate()
+                for key, value in results.items():
+                    eval_key = "eval_{}".format(key)
+                    logs[eval_key] = value
+                if self.tb_writer:
+                    for k, v in logs.items():
+                        self.tb_writer.add_scalar(k, v, global_step)
+                epoch_iterator.write(json.dumps({**logs, **{"step": global_step}}))
+
+                # Save model checkpoint
+                output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{global_step}")
+                self.save_model(output_dir)
+                self._rotate_checkpoints()
+                torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
+                torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+                logger.info("Saving optimizer and scheduler states to %s", output_dir)
+
             if self.args.max_steps > 0 and global_step > self.args.max_steps:
                 train_iterator.close()
                 break
