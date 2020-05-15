@@ -83,6 +83,7 @@ if is_tf_available():
             for ex in features:
                 yield (
                     {
+                        'guids': ex.guids,
                         "input_ids": ex.input_ids,
                         "attention_mask": ex.attention_mask,
                         "token_type_ids": ex.token_type_ids,
@@ -92,9 +93,10 @@ if is_tf_available():
 
         return tf.data.Dataset.from_generator(
             gen,
-            ({"input_ids": tf.int32, "attention_mask": tf.int32, "token_type_ids": tf.int32}, tf.int64),
+            ({'guids': tf.int32, "input_ids": tf.int32, "attention_mask": tf.int32, "token_type_ids": tf.int32}, tf.int64),
             (
                 {
+                    'guids': tf.TensorShape([None]),
                     "input_ids": tf.TensorShape([None]),
                     "attention_mask": tf.TensorShape([None]),
                     "token_type_ids": tf.TensorShape([None]),
@@ -149,7 +151,12 @@ def _glue_convert_examples_to_features(
     for i, example in enumerate(examples[:5]):
         logger.info("*** Example ***")
         logger.info("guid: %s" % (example.guid))
-        logger.info("features: %s" % features[i])
+        logger.info("text_a: %s" % (example.text_a))
+        logger.info("text_b: %s" % (example.text_b))
+        logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+        logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
+        logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
+        logger.info("label: %s (id = %d)" % (example.label, label))
 
     return features
 
@@ -509,6 +516,50 @@ class WnliProcessor(DataProcessor):
         return examples
 
 
+class QPProcessor(DataProcessor):
+    """Processor for the QP data set (GLUE version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(
+            tensor_dict["idx"].numpy(),
+            tensor_dict["sentence1"].numpy().decode("utf-8"),
+            tensor_dict["sentence2"].numpy().decode("utf-8"),
+            str(tensor_dict["label"].numpy()),
+        )
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(data_dir))
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "dev")
+            #self._read_tsv(data_dir), "dev")
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            #if i == 0:
+            #    continue
+            guid = line[0]
+            text_a = line[1]
+            text_b = line[2]
+            label = line[3]
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        return examples
+
+
+
 glue_tasks_num_labels = {
     "cola": 2,
     "mnli": 3,
@@ -519,6 +570,7 @@ glue_tasks_num_labels = {
     "qnli": 2,
     "rte": 2,
     "wnli": 2,
+    "qp": 2,
 }
 
 glue_processors = {
@@ -532,6 +584,7 @@ glue_processors = {
     "qnli": QnliProcessor,
     "rte": RteProcessor,
     "wnli": WnliProcessor,
+    "qp": QPProcessor,
 }
 
 glue_output_modes = {
@@ -545,4 +598,5 @@ glue_output_modes = {
     "qnli": "classification",
     "rte": "classification",
     "wnli": "classification",
+    "qp": "classification",
 }
