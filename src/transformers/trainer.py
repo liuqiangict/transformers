@@ -146,10 +146,14 @@ class Trainer:
         self.compute_metrics = compute_metrics
         self.prediction_loss_only = prediction_loss_only
         self.optimizers = optimizers
+
+        # Create output directory if needed
+        if self.is_local_master():
+            os.makedirs(self.args.output_dir, exist_ok=True)
         if tb_writer is not None:
             self.tb_writer = tb_writer
         elif is_tensorboard_available() and self.args.local_rank in [-1, 0]:
-            self.tb_writer = SummaryWriter(self.args.logging_dir)
+            self.tb_writer = SummaryWriter(self.args.output_dir)
         if not is_tensorboard_available():
             logger.warning(
                 "You are instantiating a Trainer but Tensorboard is not installed. You should consider installing it."
@@ -159,9 +163,6 @@ class Trainer:
                 "You are instantiating a Trainer but wandb is not installed. Install it to use Weights & Biases logging."
             )
         set_seed(self.args.seed)
-        # Create output directory if needed
-        if self.is_local_master():
-            os.makedirs(self.args.output_dir, exist_ok=True)
         if is_tpu_available():
             # Set an xla_device flag on the model's config.
             # We'll find a more elegant and not need to do this in the future.
@@ -379,7 +380,10 @@ class Trainer:
                     steps_trained_in_current_epoch -= 1
                     continue
 
-                tr_loss += self._training_step(model, inputs, optimizer)
+                loss = self._training_step(model, inputs, optimizer)
+                #tr_loss += self._training_step(model, inputs, optimizer)
+                tr_loss += loss
+                self.tb_writer.add_scalar('Train/loss', loss, global_step)
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
                     # last step in epoch but step is always smaller than gradient_accumulation_steps
@@ -408,7 +412,7 @@ class Trainer:
                             if self.args.evaluate_during_training:
                                 results = self.evaluate()
                                 for key, value in results.items():
-                                    eval_key = "eval_{}".format(key)
+                                    eval_key = "Eval/{}".format(key)
                                     logs[eval_key] = value
 
                             loss_scalar = (tr_loss - logging_loss) / self.args.logging_steps

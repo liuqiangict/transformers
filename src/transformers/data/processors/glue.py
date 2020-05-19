@@ -154,7 +154,7 @@ def _glue_convert_examples_to_features(
         logger.info("label: %s (id = %d)" % (example.label, labels[i]))
 
     features = []
-    for i, exmple in enumerate(examples):
+    for i, example in enumerate(examples):
         inputs = {k: batch_encoding[k][i] for k in batch_encoding}
 
         feature = InputFeatures(guids=example.guid, **inputs, label=labels[i])
