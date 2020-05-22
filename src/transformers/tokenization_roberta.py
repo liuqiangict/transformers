@@ -193,13 +193,13 @@ class RobertaTokenizer(GPT2Tokenizer):
                 Set to True if the token list is already formatted with special tokens for the model
 
         Returns:
-            :obj:`List[int]`: A list of integers in the range [0, 1]: 0 for a special token, 1 for a sequence token.
+            :obj:`List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
         """
         if already_has_special_tokens:
             if token_ids_1 is not None:
                 raise ValueError(
                     "You should not supply a second sequence if the provided sequence of "
-                    "ids is already formated with special tokens for the model."
+                    "ids is already formatted with special tokens for the model."
                 )
             return list(map(lambda x: 1 if x in [self.sep_token_id, self.cls_token_id] else 0, token_ids_0))
 
@@ -236,7 +236,7 @@ class RobertaTokenizer(GPT2Tokenizer):
             add_prefix_space = kwargs["add_prefix_space"]
         else:
             add_prefix_space = add_special_tokens
-        if add_prefix_space and len(text) > 0 and not text[0].isspace():
+        if add_prefix_space and not text[0].isspace():
             text = " " + text
         return text
 
