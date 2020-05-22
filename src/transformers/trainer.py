@@ -199,10 +199,15 @@ class Trainer:
         self.compute_metrics = compute_metrics
         self.prediction_loss_only = prediction_loss_only
         self.optimizers = optimizers
+
+
+        # Create output directory if needed
+        if self.is_world_master():
+            os.makedirs(self.args.output_dir, exist_ok=True)
         if tb_writer is not None:
             self.tb_writer = tb_writer
         elif is_tensorboard_available() and self.is_world_master():
-            self.tb_writer = SummaryWriter(log_dir=self.args.logging_dir)
+            self.tb_writer = SummaryWriter(log_dir=self.args.output_dir)
         if not is_tensorboard_available():
             logger.warning(
                 "You are instantiating a Trainer but Tensorboard is not installed. You should consider installing it."
@@ -215,9 +220,6 @@ class Trainer:
                 "run `pip install wandb; wandb login` see https://docs.wandb.com/huggingface."
             )
         set_seed(self.args.seed)
-        # Create output directory if needed
-        if self.is_world_master():
-            os.makedirs(self.args.output_dir, exist_ok=True)
         if is_tpu_available():
             # Set an xla_device flag on the model's config.
             # We'll find a more elegant and not need to do this in the future.
