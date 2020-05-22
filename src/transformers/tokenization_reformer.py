@@ -153,7 +153,8 @@ class ReformerTokenizer(GPT2Tokenizer):
 
 
     def build_inputs_with_special_tokens(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
+        #self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
+        self, ids: List[List[int]], start_idx: int, end_idx: int
     ) -> List[int]:
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks
@@ -172,11 +173,32 @@ class ReformerTokenizer(GPT2Tokenizer):
         Returns:
             :obj:`List[int]`: list of `input IDs <../glossary.html#input-ids>`__ with the appropriate special tokens.
         """
-        if token_ids_1 is None:
-            return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
-        cls = [self.cls_token_id]
-        sep = [self.sep_token_id]
-        return cls + token_ids_0 + sep + sep + token_ids_1 + sep
+        #if token_ids_1 is None:
+        #    return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
+        #cls = [self.cls_token_id]
+        #sep = [self.sep_token_id]
+        input_ids = []
+        token_type_ids = []
+        start_pos = -1
+        end_pos = -1
+        for i, doc_ids in enumerate(ids):
+            if i == start_idx:
+               start_pos = len(input_ids) 
+            if i == 0:
+                input_ids.append(self.cls_token_id)
+            else:
+                input_ids.append(self.sep_token_id)
+            token_type_ids.append(i)
+
+            input_ids.extend(doc_ids)
+            token_type_ids.extend([i] * len(doc_ids))
+
+            if i == end_idx:
+                end_pos = len(input_ids)
+            input_ids.append(self.sep_token_id)
+            token_type_ids.append(i)
+            
+        return input_ids, token_type_ids, start_pos, end_pos
 
     def get_special_tokens_mask(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False

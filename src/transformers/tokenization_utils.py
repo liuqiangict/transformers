@@ -1905,7 +1905,7 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         encoded_inputs = {}
 
         # Truncation: Handle max sequence length
-        total_len = 2 * len(ids)
+        total_len = len(ids) * 2
         for doc_ids in ids:
             total_len += len(doc_ids)
         #total_len = len_ids + len_pair_ids + (self.num_special_tokens_to_add(pair=pair) if add_special_tokens else 0)
@@ -1922,8 +1922,10 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
         # Add special tokens
         if add_special_tokens:
-            sequence, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
-            token_type_ids = self.create_token_type_ids_from_sequences(ids)
+            sequence, token_type_ids, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
+            #token_type_ids = self.create_token_type_ids_from_sequences(ids)
+            encoded_inputs["start_pos"] = start_pos
+            encoded_inputs["end_pos"] = end_pos
         else:
             sequence = ids + pair_ids if pair else ids
             token_type_ids = [0] * len(ids) + ([1] * len(pair_ids) if pair else [])

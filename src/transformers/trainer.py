@@ -583,6 +583,7 @@ class Trainer:
         self, model: nn.Module, inputs: Dict[str, torch.Tensor], optimizer: torch.optim.Optimizer
     ) -> float:
         model.train()
+        print(inputs)
         for k, v in inputs.items():
             inputs[k] = v.to(self.args.device)
 

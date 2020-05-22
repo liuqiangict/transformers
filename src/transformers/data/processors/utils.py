@@ -76,7 +76,8 @@ class InputFeatures:
     input_ids: List[int]
     attention_mask: Optional[List[int]] = None
     token_type_ids: Optional[List[int]] = None
-    label: Optional[List[int]] = None
+    start_positions: Optional[int] = 0
+    end_positions:  Optional[int] = 0
 
     def to_json_string(self):
         """Serializes this instance to a JSON string."""

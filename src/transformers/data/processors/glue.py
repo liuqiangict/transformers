@@ -139,28 +139,34 @@ def _glue_convert_examples_to_features(
         raise KeyError(output_mode)
 
 
-    batch_encoding, labels = tokenizer.batch_encode_plus(
+    batch_encoding = tokenizer.batch_encode_plus(
         [(example.text, example.start_idx, example.end_idx) for example in examples], max_length=max_length, pad_to_max_length=True,
     )
-
-    labels = [label_from_example(example) for example in examples]
+    #labels = [label_from_example(example) for example in examples]
 
     for i, example in enumerate(examples[:5]):
         logger.info("*** Example ***")
         logger.info("guid: %s" % (example.guid))
-        logger.info("text_a: %s" % (example.text_a))
-        logger.info("text_b: %s" % (example.text_b))
+        logger.info("text: %s" % (example.text))
+        logger.info("start index: %s" % (example.start_idx))
+        logger.info("end index: %s" % (example.end_idx))
         logger.info("input_ids: %s" % " ".join([str(x) for x in batch_encoding['input_ids'][i]]))
         logger.info("attention_mask: %s" % " ".join([str(x) for x in batch_encoding['attention_mask'][i]]))
         if 'token_type_ids' in batch_encoding.keys():
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in batch_encoding['token_type_ids'][i]]))
-        logger.info("label: %s (id = %d)" % (example.label, labels[i]))
 
     features = []
     for i, example in enumerate(examples):
         inputs = {k: batch_encoding[k][i] for k in batch_encoding}
 
-        feature = InputFeatures(guids=example.guid, **inputs, label=labels[i])
+        #feature = InputFeatures(guids=example.guid, **inputs, label=labels[i])
+        feature = InputFeatures(
+                    guids=example.guid, 
+                    input_ids=batch_encoding['input_ids'][i], 
+                    token_type_ids=batch_encoding['token_type_ids'][i], 
+                    attention_mask=batch_encoding['attention_mask'][i], 
+                    start_positions=batch_encoding['start_pos'][i],
+                    end_positions=batch_encoding['end_pos'][i])
         features.append(feature)
 
     return features
