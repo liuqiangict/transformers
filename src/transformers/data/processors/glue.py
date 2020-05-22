@@ -685,7 +685,7 @@ glue_tasks_num_labels = {
     "rte": 2,
     "wnli": 2,
     "qp": 2,
-    "deepthink": 1,
+    "deepthink": 2,
 }
 
 glue_processors = {

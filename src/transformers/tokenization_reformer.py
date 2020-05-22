@@ -188,15 +188,15 @@ class ReformerTokenizer(GPT2Tokenizer):
                 input_ids.append(self.cls_token_id)
             else:
                 input_ids.append(self.sep_token_id)
-            token_type_ids.append(i)
+            token_type_ids.append(i + 1)
 
             input_ids.extend(doc_ids)
-            token_type_ids.extend([i] * len(doc_ids))
+            token_type_ids.extend([i + 1] * len(doc_ids))
 
             if i == end_idx:
                 end_pos = len(input_ids)
             input_ids.append(self.sep_token_id)
-            token_type_ids.append(i)
+            token_type_ids.append(i + 1)
             
         return input_ids, token_type_ids, start_pos, end_pos
 
