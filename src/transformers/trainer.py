@@ -534,6 +534,22 @@ class Trainer:
                 if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                     epoch_iterator.close()
                     break
+
+
+            logs: Dict[str, float] = {}
+            logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
+            logs["learning_rate"] = (
+                    scheduler.get_last_lr()[0]
+                    if version.parse(torch.__version__) >= version.parse("1.4")
+                    else scheduler.get_lr()[0]
+                     )
+            logging_loss = tr_loss
+            self._log(logs)
+            self.evaluate()
+            
+            output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+            self.save_model(output_dir)
+
             if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                 train_iterator.close()
                 break

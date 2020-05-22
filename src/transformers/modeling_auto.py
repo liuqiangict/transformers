@@ -103,7 +103,7 @@ from .modeling_gpt2 import GPT2_PRETRAINED_MODEL_ARCHIVE_MAP, GPT2LMHeadModel, G
 from .modeling_longformer import LONGFORMER_PRETRAINED_MODEL_ARCHIVE_MAP, LongformerForMaskedLM, LongformerModel
 from .modeling_marian import MarianMTModel
 from .modeling_openai import OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_MAP, OpenAIGPTLMHeadModel, OpenAIGPTModel
-from .modeling_reformer import ReformerModel, ReformerModelWithLMHead
+from .modeling_reformer import ReformerModel, ReformerModelWithLMHead, ReformerForSequenceClassification
 from .modeling_roberta import (
     ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP,
     RobertaForMaskedLM,
@@ -251,6 +251,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING = OrderedDict(
         (XLNetConfig, XLNetForSequenceClassification),
         (FlaubertConfig, FlaubertForSequenceClassification),
         (XLMConfig, XLMForSequenceClassification),
+        (ReformerConfig, ReformerForSequenceClassification),
     ]
 )
 
