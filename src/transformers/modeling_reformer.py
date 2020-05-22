@@ -36,7 +36,8 @@ from .modeling_utils import PreTrainedModel, apply_chunking_to_forward
 logger = logging.getLogger(__name__)
 
 REFORMER_PRETRAINED_MODEL_ARCHIVE_MAP = {
-    "google/reformer-crime-and-punishment": "https://cdn.huggingface.co/google/reformer-crime-and-punishment/pytorch_model.bin"
+    "google/reformer-crime-and-punishment": "https://cdn.huggingface.co/google/reformer-crime-and-punishment/pytorch_model.bin",
+    "google/reformer-enwik8": "https://cdn.huggingface.co/google/reformer-enwik8/pytorch_model.bin",
 }
 
 
@@ -561,8 +562,8 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
 
         # get correct mask values depending on precision
         if query_key_dots.dtype == torch.float16:
-            self_mask_value = self.self_mask_value_float16
-            mask_value = self.mask_value_float16
+            self_mask_value = self.self_mask_value_float16.half()
+            mask_value = self.mask_value_float16.half()
         else:
             self_mask_value = self.self_mask_value_float32
             mask_value = self.mask_value_float32
@@ -833,7 +834,7 @@ class LocalSelfAttention(nn.Module, EfficientAttentionMixin):
         if mask is not None:
             # get mask tensor depending on half precision or not
             if query_key_dots.dtype == torch.float16:
-                mask_value = self.mask_value_float16
+                mask_value = self.mask_value_float16.half()
             else:
                 mask_value = self.mask_value_float32
 
@@ -1033,8 +1034,8 @@ class ReformerLayer(nn.Module):
         # seed for forward and backward pass
         self.attention_seed = None
         self.feed_forward_seed = None
-        self.attention_seeds = [900007, 926227, 928559, 981173]
-        self.feed_forward_seeds = [919939, 961739, 980711, 999983]
+        #self.attention_seeds = [900007, 926227, 928559, 981173]
+        #self.feed_forward_seeds = [919939, 961739, 980711, 999983]
 
         self.feed_forward = ChunkReformerFeedForward(config)
 
@@ -1051,8 +1052,8 @@ class ReformerLayer(nn.Module):
         if next(self.parameters()).device.type == "cuda":
             # GPU
             device_idx = torch.cuda.current_device()
-            #self.attention_seed = torch.cuda.default_generators[device_idx].seed()
-            self.attention_seed = self.attention_seeds[device_idx]
+            self.attention_seed = torch.cuda.default_generators[device_idx].seed()
+            #self.attention_seed = self.attention_seeds[device_idx]
             torch.cuda.manual_seed(self.attention_seed)
         else:
             # CPU
@@ -1073,8 +1074,8 @@ class ReformerLayer(nn.Module):
         if next(self.parameters()).device.type == "cuda":
             # GPU
             device_idx = torch.cuda.current_device()
-            #self.feed_forward_seed = torch.cuda.default_generators[device_idx].seed()
-            self.feed_forward_seed = self.feed_forward_seeds[device_idx]
+            self.feed_forward_seed = torch.cuda.default_generators[device_idx].seed()
+            #self.feed_forward_seed = self.feed_forward_seeds[device_idx]
             torch.cuda.manual_seed(self.feed_forward_seed)
         else:
             # CPU
