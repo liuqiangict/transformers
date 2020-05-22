@@ -17,6 +17,7 @@
 
 import logging
 import os
+import json
 from enum import Enum
 from typing import List, Optional, Union
 
@@ -137,11 +138,12 @@ def _glue_convert_examples_to_features(
             return float(example.label)
         raise KeyError(output_mode)
 
-    labels = [label_from_example(example) for example in examples]
 
-    batch_encoding = tokenizer.batch_encode_plus(
-        [(example.text_a, example.text_b) for example in examples], max_length=max_length, pad_to_max_length=True,
+    batch_encoding, labels = tokenizer.batch_encode_plus(
+        [(example.text, example.start_idx, example.end_idx) for example in examples], max_length=max_length, pad_to_max_length=True,
     )
+
+    labels = [label_from_example(example) for example in examples]
 
     for i, example in enumerate(examples[:5]):
         logger.info("*** Example ***")
@@ -614,6 +616,56 @@ class QPProcessor(DataProcessor):
                 InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
         return examples
 
+class DeepThinkProcessor(DataProcessor):
+    """Processor for the QP data set (GLUE version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(
+            tensor_dict["idx"].numpy(),
+            tensor_dict["sentence1"].numpy().decode("utf-8"),
+            tensor_dict["sentence2"].numpy().decode("utf-8"),
+            str(tensor_dict["label"].numpy()),
+        )
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(data_dir))
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "dev")
+            #self._read_tsv(data_dir), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv_from_dir(data_dir), "test")
+            #self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        """Schema: Guid, Query, Doc, fuzzy_pssg, start_sent, end_sent"""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = line[0]
+            text = []
+            text.append(line[1])
+            docs = json.loads(line[2])
+            for doc in docs:
+                text.append(doc['Text'])
+            start_idx = line[4]
+            end_idx = line[5]
+            examples.append(
+                InputExample(guid=guid, text=text, start_idx=start_idx, end_idx=end_idx))
+        return examples
 
 
 glue_tasks_num_labels = {
@@ -627,6 +679,7 @@ glue_tasks_num_labels = {
     "rte": 2,
     "wnli": 2,
     "qp": 2,
+    "deepthink": 1,
 }
 
 glue_processors = {
@@ -641,6 +694,7 @@ glue_processors = {
     "rte": RteProcessor,
     "wnli": WnliProcessor,
     "qp": QPProcessor,
+    "deepthink": DeepThinkProcessor,
 }
 
 glue_output_modes = {
@@ -655,4 +709,5 @@ glue_output_modes = {
     "rte": "classification",
     "wnli": "classification",
     "qp": "classification",
+    "deepthink": "regression",
 }

@@ -571,8 +571,8 @@ class Trainer:
         if self.tb_writer:
             for k, v in logs.items():
                 self.tb_writer.add_scalar(k, v, self.global_step)
-        if is_wandb_available():
-            wandb.log(logs, step=self.global_step)
+        #if is_wandb_available():
+        #    wandb.log(logs, step=self.global_step)
         output = json.dumps({**logs, **{"step": self.global_step}})
         if iterator is not None:
             iterator.write(output)

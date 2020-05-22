@@ -151,6 +151,7 @@ class ReformerTokenizer(GPT2Tokenizer):
             **kwargs,
         )
 
+
     def build_inputs_with_special_tokens(
         self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
     ) -> List[int]:
@@ -229,7 +230,7 @@ class ReformerTokenizer(GPT2Tokenizer):
 
         if token_ids_1 is None:
             return len(cls + token_ids_0 + sep) * [0]
-        return len(cls + token_ids_0 + sep + sep + token_ids_1 + sep) * [0]
+        return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
     def prepare_for_tokenization(self, text, add_special_tokens=False, **kwargs):
         if "add_prefix_space" in kwargs:

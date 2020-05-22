@@ -27,7 +27,7 @@ from typing import List, Optional, Union
 
 from ...file_utils import is_tf_available, is_torch_available
 
-
+csv.field_size_limit(sys.maxsize)
 logger = logging.getLogger(__name__)
 
 
@@ -47,9 +47,9 @@ class InputExample:
     """
 
     guid: str
-    text_a: str
-    text_b: Optional[str] = None
-    label: Optional[str] = None
+    text: list
+    start_idx: Optional[str] = None
+    end_idx: Optional[str] = None
 
     def to_json_string(self):
         """Serializes this instance to a JSON string."""
@@ -76,7 +76,7 @@ class InputFeatures:
     input_ids: List[int]
     attention_mask: Optional[List[int]] = None
     token_type_ids: Optional[List[int]] = None
-    label: Optional[Union[int, float]] = None
+    label: Optional[List[int]] = None
 
     def to_json_string(self):
         """Serializes this instance to a JSON string."""
