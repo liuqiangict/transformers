@@ -87,6 +87,18 @@ def set_seed(seed: int):
     # ^^ safe to call this function even if cuda is not available
 
 
+def _get_best_indexes(logits, n_best_size):
+    """Get the n-best logits from a list."""
+    index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
+
+    best_indexes = []
+    for i in range(len(index_and_score)):
+        if i >= n_best_size:
+            break
+        best_indexes.append(index_and_score[i][0])
+    return best_indexes
+
+
 @contextmanager
 def torch_distributed_zero_first(local_rank: int):
     """
@@ -817,7 +829,7 @@ class Trainer:
         #else:
         metrics = {}
         if len(eval_losses) > 0:
-            metrics["Eval/loss"] = np.mean(eval_losses)
+            metrics["loss"] = np.mean(eval_losses)
 
         exact_match = 0
         total = 0
@@ -834,7 +846,7 @@ class Trainer:
             if token_type_id[start_label_ids[i]] in start_pred_idx and token_type_id[end_label_ids[i]] in end_pred_idx:
                 exact_match += 1
             total += 1
-        metrics["Eval/exact_match"] = exact_match / total
+        metrics["exact_match"] = exact_match / total
 
         # Prefix all keys with eval_
         for key in list(metrics.keys()):
