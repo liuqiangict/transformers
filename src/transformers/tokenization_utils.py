@@ -1727,15 +1727,16 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
         input_ids = []
         for ids_or_pair_ids in batch_text_or_text_pairs:
-            if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 3 and not is_pretokenized:
-                start_idx = int(ids_or_pair_ids[1])
-                end_idx = int(ids_or_pair_ids[2])
+            if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 4 and not is_pretokenized:
+                guid = ids_or_pair_ids[0]
+                start_idx = int(ids_or_pair_ids[2])
+                end_idx = int(ids_or_pair_ids[3])
                 assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
-                assert end_idx >= start_idx and end_idx < len(ids_or_pair_ids[0]), "Incorrect start index."
+                assert end_idx >= start_idx and end_idx < len(ids_or_pair_ids[1]), "Incorrect start index."
                 input_id = []
-                for doc in ids_or_pair_ids[0]:
+                for doc in ids_or_pair_ids[1]:
                     input_id.append(get_input_ids(doc))
-                input_ids.append((input_id, start_idx, end_idx))
+                input_ids.append((guid, input_id, start_idx, end_idx))
             else:
                 if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 2 and not is_pretokenized:
                     ids, pair_ids = ids_or_pair_ids
@@ -1758,12 +1759,13 @@ class PreTrainedTokenizer(SpecialTokensMixin):
             max_length = max([total_sequence_length(ids) for ids in input_ids])
 
         batch_outputs = {}
-        for input_ids, start_idx, end_idx in input_ids:
+        for guid, input_id, start_idx, end_idx in input_ids:
             # Prepares a sequence of input id, or a pair of sequences of inputs ids so that it can be used by
             # the model. It adds special tokens, truncates sequences if overflowing while taking into account
             # the special tokens and manages a window stride for overflowing tokens
             outputs = self.prepare_for_model(
-                input_ids,
+                guid,
+                input_id,
                 start_idx,
                 end_idx,
                 max_length=max_length,
@@ -1778,6 +1780,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                 return_lengths=return_lengths,
                 return_tensors=None,  # We will convert the whole batch to tensors at the end
             )
+            if outputs == None:
+                continue
 
             for key, value in outputs.items():
                 if key not in batch_outputs:
@@ -1820,6 +1824,7 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
     def prepare_for_model(
         self,
+        guid: str,
         ids: List[List[int]],
         start_idx: int,
         end_idx: int,
@@ -1903,6 +1908,7 @@ class PreTrainedTokenizer(SpecialTokensMixin):
             return_attention_mask = "attention_mask" in self.model_input_names
 
         encoded_inputs = {}
+        encoded_inputs['guid'] = guid
 
         # Truncation: Handle max sequence length
         total_len = len(ids) * 2
@@ -1923,6 +1929,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         # Add special tokens
         if add_special_tokens:
             sequence, token_type_ids, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
+            if start_pos == -1:
+                return None
             #token_type_ids = self.create_token_type_ids_from_sequences(ids)
             encoded_inputs["start_pos"] = start_pos
             encoded_inputs["end_pos"] = end_pos

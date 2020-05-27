@@ -140,7 +140,7 @@ def _glue_convert_examples_to_features(
 
 
     batch_encoding = tokenizer.batch_encode_plus(
-        [(example.text, example.start_idx, example.end_idx) for example in examples], max_length=max_length, pad_to_max_length=True,
+        [(example.guid, example.text, example.start_idx, example.end_idx) for example in examples], max_length=max_length, pad_to_max_length=True,
     )
     #labels = [label_from_example(example) for example in examples]
 
@@ -156,12 +156,14 @@ def _glue_convert_examples_to_features(
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in batch_encoding['token_type_ids'][i]]))
 
     features = []
-    for i, example in enumerate(examples):
-        inputs = {k: batch_encoding[k][i] for k in batch_encoding}
+    size = len(batch_encoding['guid'])
+    #for i, example in enumerate(examples):
+    for i in range(size):
+        #inputs = {k: batch_encoding[k][i] for k in batch_encoding}
 
         #feature = InputFeatures(guids=example.guid, **inputs, label=labels[i])
         feature = InputFeatures(
-                    guids=example.guid, 
+                    guids=batch_encoding['guid'][i], 
                     input_ids=batch_encoding['input_ids'][i], 
                     token_type_ids=batch_encoding['token_type_ids'][i], 
                     attention_mask=batch_encoding['attention_mask'][i], 
@@ -669,6 +671,9 @@ class DeepThinkProcessor(DataProcessor):
                 text.append(doc['Text'])
             start_idx = line[4]
             end_idx = line[5]
+            #if int(end_idx) > 300 or len(' '.join(docs[:int(end_idx)])) > 16000:
+            #    print(start_idx, end_idx)
+            #    continue
             examples.append(
                 InputExample(guid=guid, text=text, start_idx=start_idx, end_idx=end_idx))
         return examples

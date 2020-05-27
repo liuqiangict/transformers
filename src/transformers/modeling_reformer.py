@@ -286,6 +286,8 @@ class EfficientAttentionMixin:
 class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
     def __init__(self, config):
         super().__init__()
+        self.config = config
+
         self.chunk_length = config.lsh_attn_chunk_length
         self.num_hashes = config.num_hashes
         self.num_buckets = config.num_buckets
@@ -535,15 +537,22 @@ class LSHSelfAttention(nn.Module, EfficientAttentionMixin):
         return sorted_bucket_idx, undo_sorted_bucket_idx
 
     def _set_num_buckets(self, sequence_length):
-        # recommended `num_buckets` from paper
-        num_buckets = 2 * sequence_length // self.chunk_length
+        # `num_buckets` should be set to 2 * sequence_length // chunk_length as recommended in paper
+        num_buckets_pow_2 = (2 * (sequence_length // self.chunk_length)).bit_length() - 1
+        # make sure buckets are power of 2
+        num_buckets = 2 ** num_buckets_pow_2
 
         # factorize `num_buckets` if `num_buckets` becomes too large
-        num_buckets_limit = max(int((self.max_position_embeddings // self.chunk_length) ** (0.5)), self.chunk_length,)
-        if num_buckets > 2 * num_buckets_limit:
-            num_buckets = [num_buckets_limit, num_buckets // num_buckets_limit + 1]
+        num_buckets_limit = 2 * max(
+            int((self.max_position_embeddings // self.chunk_length) ** (0.5)), self.chunk_length,
+        )
+        if num_buckets > num_buckets_limit:
+            num_buckets = [2 ** (num_buckets_pow_2 // 2), 2 ** (num_buckets_pow_2 - num_buckets_pow_2 // 2)]
 
         logger.warning("config.num_buckets is not set. Setting config.num_buckets to {}...".format(num_buckets))
+
+        # set num buckets in config to be properly saved
+        self.config.num_buckets = num_buckets
         self.num_buckets = num_buckets
 
     def _attend(
@@ -1037,8 +1046,6 @@ class ReformerLayer(nn.Module):
         # seed for forward and backward pass
         self.attention_seed = None
         self.feed_forward_seed = None
-        #self.attention_seeds = [900007, 926227, 928559, 981173]
-        #self.feed_forward_seeds = [919939, 961739, 980711, 999983]
 
         self.feed_forward = ChunkReformerFeedForward(config)
 
@@ -1056,12 +1063,10 @@ class ReformerLayer(nn.Module):
             # GPU
             device_idx = torch.cuda.current_device()
             self.attention_seed = torch.cuda.default_generators[device_idx].seed()
-            #self.attention_seed = self.attention_seeds[device_idx]
             torch.cuda.manual_seed(self.attention_seed)
         else:
             # CPU
             self.attention_seed = int(torch.seed() % sys.maxsize)
-            #self.attention_seed = self.attention_seeds[0]
             torch.manual_seed(self.attention_seed)
 
     def _init_feed_forward_seed(self):
@@ -1078,12 +1083,10 @@ class ReformerLayer(nn.Module):
             # GPU
             device_idx = torch.cuda.current_device()
             self.feed_forward_seed = torch.cuda.default_generators[device_idx].seed()
-            #self.feed_forward_seed = self.feed_forward_seeds[device_idx]
             torch.cuda.manual_seed(self.feed_forward_seed)
         else:
             # CPU
             self.feed_forward_seed = int(torch.seed() % sys.maxsize)
-            #self.feed_forward_seed = self.feed_forward_seeds[0]
             torch.manual_seed(self.feed_forward_seed)
 
     def forward(
@@ -1344,6 +1347,7 @@ class ReformerEncoder(nn.Module):
         return ReformerEncoderOutput(
             hidden_states=hidden_states, all_hidden_states=all_hidden_states, all_attentions=all_attentions
         )
+
 
 class ReformerOnlyLMHead(nn.Module):
     def __init__(self, config):

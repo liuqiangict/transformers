@@ -177,6 +177,8 @@ class ReformerTokenizer(GPT2Tokenizer):
         #    return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
         #cls = [self.cls_token_id]
         #sep = [self.sep_token_id]
+        if  end_idx >= len(ids):
+            return None, None, -1, -1
         assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
         assert end_idx >= start_idx and end_idx < len(ids), "Incorrect end index of {}, and length of the ids is {}.".format(end_idx, len(ids))
 
