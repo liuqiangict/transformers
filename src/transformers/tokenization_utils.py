@@ -22,6 +22,7 @@ import logging
 import operator
 import os
 import re
+import warnings
 from collections import UserDict, defaultdict
 from contextlib import contextmanager
 from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
@@ -502,6 +503,7 @@ class SpecialTokensMixin:
             if key in self.SPECIAL_TOKENS_ATTRIBUTES:
                 if key == "additional_special_tokens":
                     assert isinstance(value, (list, tuple)) and all(isinstance(t, str) for t in value)
+                    setattr(self, key, value)
                 elif isinstance(value, AddedTokenFast):
                     setattr(self, key, str(value))
                 elif isinstance(value, str):
@@ -822,7 +824,14 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         super().__init__(**kwargs)
 
         # For backward compatibility we fallback to set model_max_length from max_len if provided
-        model_max_length = model_max_length if model_max_length is not None else kwargs.pop("max_len", None)
+        if "max_len" in kwargs:
+            warnings.warn(
+                "Parameter max_len is deprecated and will be removed in a future release. "
+                "Use model_max_length instead.",
+                category=FutureWarning,
+            )
+
+            model_max_length = kwargs.pop("max_len")
         self.model_max_length = model_max_length if model_max_length is not None else VERY_LARGE_INTEGER
 
         # Padding side is right by default and overridden in subclasses. If specified in the kwargs, it is changed.
@@ -1601,8 +1610,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         pad_to_max_length: bool = False,
         is_pretokenized: bool = False,
         return_tensors: Optional[str] = None,
-        return_token_type_ids: Optional[bool] = True,
-        return_attention_masks: Optional[bool] = True,
+        return_token_type_ids: Optional[bool] = None,
+        return_attention_masks: Optional[bool] = None,
         return_overflowing_tokens: bool = False,
         return_special_tokens_masks: bool = False,
         return_offsets_mapping: bool = False,
@@ -1727,24 +1736,14 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
         input_ids = []
         for ids_or_pair_ids in batch_text_or_text_pairs:
-            if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 4 and not is_pretokenized:
-                guid = ids_or_pair_ids[0]
-                start_idx = int(ids_or_pair_ids[2])
-                end_idx = int(ids_or_pair_ids[3])
-                assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
-                assert end_idx >= start_idx and end_idx < len(ids_or_pair_ids[1]), "Incorrect start index."
-                input_id = []
-                for doc in ids_or_pair_ids[1]:
-                    input_id.append(get_input_ids(doc))
-                input_ids.append((guid, input_id, start_idx, end_idx))
+            if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 2 and not is_pretokenized:
+                ids, pair_ids = ids_or_pair_ids
             else:
-                if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 2 and not is_pretokenized:
-                    ids, pair_ids = ids_or_pair_ids
-                else:
-                    ids, pair_ids = ids_or_pair_ids, None
-                first_ids = get_input_ids(ids)
-                second_ids = get_input_ids(pair_ids) if pair_ids is not None else None
-                input_ids.append((first_ids, second_ids))
+                ids, pair_ids = ids_or_pair_ids, None
+
+            first_ids = get_input_ids(ids)
+            second_ids = get_input_ids(pair_ids) if pair_ids is not None else None
+            input_ids.append((first_ids, second_ids))
 
         if max_length is None and pad_to_max_length:
 
@@ -1759,15 +1758,13 @@ class PreTrainedTokenizer(SpecialTokensMixin):
             max_length = max([total_sequence_length(ids) for ids in input_ids])
 
         batch_outputs = {}
-        for guid, input_id, start_idx, end_idx in input_ids:
+        for first_ids, second_ids in input_ids:
             # Prepares a sequence of input id, or a pair of sequences of inputs ids so that it can be used by
             # the model. It adds special tokens, truncates sequences if overflowing while taking into account
             # the special tokens and manages a window stride for overflowing tokens
             outputs = self.prepare_for_model(
-                guid,
-                input_id,
-                start_idx,
-                end_idx,
+                first_ids,
+                pair_ids=second_ids,
                 max_length=max_length,
                 pad_to_max_length=pad_to_max_length,
                 add_special_tokens=add_special_tokens,
@@ -1780,8 +1777,6 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                 return_lengths=return_lengths,
                 return_tensors=None,  # We will convert the whole batch to tensors at the end
             )
-            if outputs == None:
-                continue
 
             for key, value in outputs.items():
                 if key not in batch_outputs:
@@ -1824,10 +1819,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
     def prepare_for_model(
         self,
-        guid: str,
-        ids: List[List[int]],
-        start_idx: int,
-        end_idx: int,
+        ids: List[int],
+        pair_ids: Optional[List[int]] = None,
         max_length: Optional[int] = None,
         add_special_tokens: bool = True,
         stride: int = 0,
@@ -1897,9 +1890,9 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                     tokens and 1 specifying sequence tokens.
                 - ``length``: this is the length of ``input_ids``
         """
-        #pair = bool(pair_ids is not None)
-        #len_ids = len(ids)
-        #len_pair_ids = len(pair_ids) if pair else 0
+        pair = bool(pair_ids is not None)
+        len_ids = len(ids)
+        len_pair_ids = len(pair_ids) if pair else 0
 
         # Load from model defaults
         if return_token_type_ids is None:
@@ -1908,17 +1901,14 @@ class PreTrainedTokenizer(SpecialTokensMixin):
             return_attention_mask = "attention_mask" in self.model_input_names
 
         encoded_inputs = {}
-        encoded_inputs['guid'] = guid
 
         # Truncation: Handle max sequence length
-        total_len = len(ids) * 2
-        for doc_ids in ids:
-            total_len += len(doc_ids)
-        #total_len = len_ids + len_pair_ids + (self.num_special_tokens_to_add(pair=pair) if add_special_tokens else 0)
+        total_len = len_ids + len_pair_ids + (self.num_special_tokens_to_add(pair=pair) if add_special_tokens else 0)
         if max_length and total_len > max_length:
-            ids = self.truncate_sequences(
+            ids, pair_ids, overflowing_tokens = self.truncate_sequences(
                 ids,
-                max_length=max_length,
+                pair_ids=pair_ids,
+                num_tokens_to_remove=total_len - max_length,
                 truncation_strategy=truncation_strategy,
                 stride=stride,
             )
@@ -1928,12 +1918,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
         # Add special tokens
         if add_special_tokens:
-            sequence, token_type_ids, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
-            if start_pos == -1:
-                return None
-            #token_type_ids = self.create_token_type_ids_from_sequences(ids)
-            encoded_inputs["start_pos"] = start_pos
-            encoded_inputs["end_pos"] = end_pos
+            sequence = self.build_inputs_with_special_tokens(ids, pair_ids)
+            token_type_ids = self.create_token_type_ids_from_sequences(ids, pair_ids)
         else:
             sequence = ids + pair_ids if pair else ids
             token_type_ids = [0] * len(ids) + ([1] * len(pair_ids) if pair else [])
@@ -2037,8 +2023,9 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
     def truncate_sequences(
         self,
-        ids: List[List[int]],
-        max_length: int = 0,
+        ids: List[int],
+        pair_ids: Optional[List[int]] = None,
+        num_tokens_to_remove: int = 0,
         truncation_strategy: str = "longest_first",
         stride: int = 0,
     ) -> Tuple[List[int], List[int], List[int]]:
@@ -2062,18 +2049,20 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                 If set to a number along with max_length, the overflowing tokens returned will contain some tokens
                 from the main sequence returned. The value of this argument defines the number of additional tokens.
         """
+        if num_tokens_to_remove <= 0:
+            return ids, pair_ids, []
 
         if truncation_strategy == "longest_first":
-            index = 0
-            size = 2
-            for doc_id in ids:
-                size += len(doc_id) + 2
-                if size >= max_length:
-                    break
-                index += 1
-            
-            ids = ids[:index]
-            return ids
+            overflowing_tokens = []
+            for _ in range(num_tokens_to_remove):
+                if pair_ids is None or len(ids) > len(pair_ids):
+                    overflowing_tokens = [ids[-1]] + overflowing_tokens
+                    ids = ids[:-1]
+                else:
+                    pair_ids = pair_ids[:-1]
+            window_len = min(len(ids), stride)
+            if window_len > 0:
+                overflowing_tokens = ids[-window_len:] + overflowing_tokens
         elif truncation_strategy == "only_first":
             assert len(ids) > num_tokens_to_remove
             window_len = min(len(ids), stride + num_tokens_to_remove)
