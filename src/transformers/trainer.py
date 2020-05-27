@@ -88,6 +88,18 @@ def set_seed(seed: int):
     # ^^ safe to call this function even if cuda is not available
 
 
+def _get_best_indexes(logits, n_best_size):
+    """Get the n-best logits from a list."""
+    index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
+
+    best_indexes = []
+    for i in range(len(index_and_score)):
+        if i >= n_best_size:
+            break
+        best_indexes.append(index_and_score[i][0])
+    return best_indexes
+
+
 @contextmanager
 def torch_distributed_zero_first(local_rank: int):
     """
@@ -199,10 +211,14 @@ class Trainer:
         self.compute_metrics = compute_metrics
         self.prediction_loss_only = prediction_loss_only
         self.optimizers = optimizers
+
+        if self.is_world_master():
+            os.makedirs(self.args.output_dir, exist_ok=True)
+
         if tb_writer is not None:
             self.tb_writer = tb_writer
         elif is_tensorboard_available() and self.is_world_master():
-            self.tb_writer = SummaryWriter(log_dir=self.args.logging_dir)
+            self.tb_writer = SummaryWriter(log_dir=self.args.output_dir)
         if not is_tensorboard_available():
             logger.warning(
                 "You are instantiating a Trainer but Tensorboard is not installed. You should consider installing it."
@@ -215,9 +231,6 @@ class Trainer:
                 "run `pip install wandb; wandb login` see https://docs.wandb.com/huggingface."
             )
         set_seed(self.args.seed)
-        # Create output directory if needed
-        if self.is_world_master():
-            os.makedirs(self.args.output_dir, exist_ok=True)
         if is_tpu_available():
             # Set an xla_device flag on the model's config.
             # We'll find a more elegant and not need to do this in the future.
@@ -490,20 +503,25 @@ class Trainer:
                     self.global_step += 1
                     self.epoch = epoch + (step + 1) / len(epoch_iterator)
 
+                    logs: Dict[str, float] = {}
+                    logs["Train/loss"] = tr_loss - logging_loss
+                    logs["Train/learning_rate"] = (scheduler.get_last_lr()[0] if version.parse(torch.__version__) >= version.parse("1.4") else scheduler.get_lr()[0])
+                    logging_loss = tr_loss
+                    self._log(logs)
+
                     if (self.args.logging_steps > 0 and self.global_step % self.args.logging_steps == 0) or (
                         self.global_step == 1 and self.args.logging_first_step
                     ):
-                        logs: Dict[str, float] = {}
-                        logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
+                        #logs: Dict[str, float] = {}
+                        #logs["loss"] = (tr_loss - logging_loss) / self.args.logging_steps
                         # backward compatibility for pytorch schedulers
-                        logs["learning_rate"] = (
-                            scheduler.get_last_lr()[0]
-                            if version.parse(torch.__version__) >= version.parse("1.4")
-                            else scheduler.get_lr()[0]
-                        )
-                        logging_loss = tr_loss
-
-                        self._log(logs)
+                        #logs["learning_rate"] = (
+                        #    scheduler.get_last_lr()[0]
+                        #    if version.parse(torch.__version__) >= version.parse("1.4")
+                        #    else scheduler.get_lr()[0]
+                        #)
+                        #logging_loss = tr_loss
+                        #self._log(logs)
 
                         if self.args.evaluate_during_training:
                             self.evaluate()
@@ -530,6 +548,10 @@ class Trainer:
                         elif self.is_world_master():
                             torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                             torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
+
+                self.evaluate()
+                output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+                self.save_model(output_dir)
 
                 if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                     epoch_iterator.close()
@@ -739,15 +761,18 @@ class Trainer:
         logger.info("  Num examples = %d", self.num_examples(dataloader))
         logger.info("  Batch size = %d", batch_size)
         eval_losses: List[float] = []
-        preds: torch.Tensor = None
-        label_ids: torch.Tensor = None
+        start_positions_preds: torch.Tensor = None
+        end_positions_preds: torch.Tensor = None
+        start_label_ids: torch.Tensor = None
+        end_label_ids: torch.Tensor = None
+        token_type_ids: torch.Tensor = None
         model.eval()
 
         if is_tpu_available():
             dataloader = pl.ParallelLoader(dataloader, [self.args.device]).per_device_loader(self.args.device)
 
         for inputs in tqdm(dataloader, desc=description):
-            has_labels = any(inputs.get(k) is not None for k in ["labels", "lm_labels", "masked_lm_labels"])
+            has_labels = any(inputs.get(k) is not None for k in ["labels", "lm_labels", "masked_lm_labels", "start_positions", "end_positions"])
 
             for k, v in inputs.items():
                 inputs[k] = v.to(self.args.device)
@@ -755,54 +780,82 @@ class Trainer:
             with torch.no_grad():
                 outputs = model(**inputs)
                 if has_labels:
-                    step_eval_loss, logits = outputs[:2]
+                    step_eval_loss, start_positions_logits, end_positions_logits = outputs[:3]
                     eval_losses += [step_eval_loss.mean().item()]
                 else:
                     logits = outputs[0]
 
             if not prediction_loss_only:
-                if preds is None:
-                    preds = logits.detach()
+                if start_positions_preds is None:
+                    start_positions_preds = start_positions_logits.detach()
+                    end_positions_preds = end_positions_logits.detach()
                 else:
-                    preds = torch.cat((preds, logits.detach()), dim=0)
-                if inputs.get("labels") is not None:
-                    if label_ids is None:
-                        label_ids = inputs["labels"].detach()
+                    start_positions_preds = torch.cat((start_positions_preds, start_positions_logits.detach()), dim=0)
+                    end_positions_preds = torch.cat((end_positions_preds, end_positions_logits.detach()), dim=0)
+                if inputs.get("start_positions") is not None:
+                    if start_label_ids is None:
+                        start_label_ids = inputs["start_positions"].detach()
+                        end_label_ids = inputs["end_positions"].detach()
                     else:
-                        label_ids = torch.cat((label_ids, inputs["labels"].detach()), dim=0)
+                        start_label_ids = torch.cat((start_label_ids, inputs["start_positions"].detach()), dim=0)
+                        end_label_ids = torch.cat((end_label_ids, inputs["end_positions"].detach()), dim=0)
+                if inputs.get("token_type_ids") is not None:
+                    if token_type_ids is None:
+                        token_type_ids = inputs["token_type_ids"].detach()
+                    else:
+                        token_type_ids = torch.cat((token_type_ids, inputs["token_type_ids"].detach()), dim=0)
 
         if self.args.local_rank != -1:
             # In distributed mode, concatenate all results from all nodes:
-            if preds is not None:
-                preds = self.distributed_concat(preds, num_total_examples=self.num_examples(dataloader))
-            if label_ids is not None:
-                label_ids = self.distributed_concat(label_ids, num_total_examples=self.num_examples(dataloader))
-        elif is_tpu_available():
-            # tpu-comment: Get all predictions and labels from all worker shards of eval dataset
-            if preds is not None:
-                preds = xm.mesh_reduce("eval_preds", preds, torch.cat)
-            if label_ids is not None:
-                label_ids = xm.mesh_reduce("eval_label_ids", label_ids, torch.cat)
+            if start_positions_preds is not None:
+                start_positions_preds = self.distributed_concat(start_positions_preds, num_total_examples=self.num_examples(dataloader))
+                end_positions_preds = self.distributed_concat(end_positions_preds, num_total_examples=self.num_examples(dataloader))
+            if start_label_ids is not None:
+                start_label_ids = self.distributed_concat(start_label_ids, num_total_examples=self.num_examples(dataloader))
+                end_label_ids = self.distributed_concat(end_label_ids, num_total_examples=self.num_examples(dataloader))
 
         # Finally, turn the aggregated tensors into numpy arrays.
-        if preds is not None:
-            preds = preds.cpu().numpy()
-        if label_ids is not None:
-            label_ids = label_ids.cpu().numpy()
 
-        if self.compute_metrics is not None and preds is not None and label_ids is not None:
-            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
-        else:
-            metrics = {}
+        if start_positions_preds is not None:
+            start_positions_preds = start_positions_preds.cpu().numpy()
+            end_positions_preds = end_positions_preds.cpu().numpy()
+        if start_label_ids is not None:
+            start_label_ids = start_label_ids.cpu().numpy()
+            end_label_ids = end_label_ids.cpu().numpy()
+        if token_type_ids is not None:
+            token_type_ids = token_type_ids.cpu().numpy()
+
+        #if self.compute_metrics is not None and start_positions_preds is not None and start_label_ids is not None:
+        #    metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
+        #else:
+        metrics = {}
         if len(eval_losses) > 0:
-            metrics["eval_loss"] = np.mean(eval_losses)
+            metrics["loss"] = np.mean(eval_losses)
+
+        exact_match = 0
+        total = 0
+        for i in range(len(start_label_ids)):
+            token_type_id = token_type_ids[i]
+            start_pred_idx = _get_best_indexes(start_positions_preds[i], 3) 
+            end_pred_idx = _get_best_indexes(end_positions_preds[i], 3) 
+            #print(start_label_ids[i], end_label_ids[i])
+            #print(start_pred_idx, end_pred_idx)
+            start_pred_idx = [token_type_id[index] for index in start_pred_idx] 
+            end_pred_idx = [token_type_id[index] for index in end_pred_idx] 
+            #print(token_type_id[start_label_ids[i]], token_type_id[end_label_ids[i]])
+            #print(start_pred_idx, end_pred_idx)
+            if token_type_id[start_label_ids[i]] in start_pred_idx and token_type_id[end_label_ids[i]] in end_pred_idx:
+                exact_match += 1
+            total += 1
+        metrics["exact_match"] = exact_match / total
+
 
         # Prefix all keys with eval_
         for key in list(metrics.keys()):
             if not key.startswith("eval_"):
-                metrics[f"eval_{key}"] = metrics.pop(key)
+                metrics[f"Eval/{key}"] = metrics.pop(key)
 
-        return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
+        return PredictionOutput(predictions=start_positions_preds, label_ids=start_label_ids, metrics=metrics)
 
     def distributed_concat(self, tensor: torch.Tensor, num_total_examples: int) -> torch.Tensor:
         assert self.args.local_rank != -1

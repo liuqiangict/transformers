@@ -170,6 +170,8 @@ def _glue_convert_examples_to_features(
                     start_positions=batch_encoding['start_pos'][i],
                     end_positions=batch_encoding['end_pos'][i])
         features.append(feature)
+        if i % 10000 == 0:
+            logger.info("Processed: %d" % (i))
 
     return features
 
