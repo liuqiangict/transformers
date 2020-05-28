@@ -1790,8 +1790,6 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                 return_lengths=return_lengths,
                 return_tensors=None,  # We will convert the whole batch to tensors at the end
             )
-            if outputs == None:
-                continue
 
             for key, value in outputs.items():
                 if key not in batch_outputs:
@@ -1939,8 +1937,6 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         # Add special tokens
         if add_special_tokens:
             sequence, token_type_ids, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
-            if start_pos == -1:
-                return None
             #token_type_ids = self.create_token_type_ids_from_sequences(ids)
             encoded_inputs["start_pos"] = start_pos
             encoded_inputs["end_pos"] = end_pos
