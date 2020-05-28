@@ -1738,8 +1738,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         for ids_or_pair_ids in batch_text_or_text_pairs:
             if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 4 and not is_pretokenized:
                 guid = ids_or_pair_ids[0]
-                start_idx = int(ids_or_pair_ids[2])
-                end_idx = int(ids_or_pair_ids[3])
+                start_idx = ids_or_pair_ids[2]
+                end_idx = ids_or_pair_ids[3]
                 assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
                 assert end_idx >= start_idx and end_idx < len(ids_or_pair_ids[1]), "Incorrect start index."
                 input_id = []

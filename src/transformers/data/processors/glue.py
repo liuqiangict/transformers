@@ -671,11 +671,8 @@ class DeepThinkProcessor(DataProcessor):
             docs = json.loads(line[2])
             for doc in docs:
                 text.append(doc['Text'])
-            start_idx = line[4]
-            end_idx = line[5]
-            #if int(end_idx) > 300 or len(' '.join(docs[:int(end_idx)])) > 16000:
-            #    print(start_idx, end_idx)
-            #    continue
+            start_idx = int(line[4]) + 1
+            end_idx = int(line[5]) + 1
             examples.append(
                 InputExample(guid=guid, text=text, start_idx=start_idx, end_idx=end_idx))
         return examples

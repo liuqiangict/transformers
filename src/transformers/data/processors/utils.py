@@ -48,8 +48,8 @@ class InputExample:
 
     guid: str
     text: list
-    start_idx: Optional[str] = None
-    end_idx: Optional[str] = None
+    start_idx: Optional[int] = None
+    end_idx: Optional[int] = None
 
     def to_json_string(self):
         """Serializes this instance to a JSON string."""

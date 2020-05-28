@@ -549,13 +549,13 @@ class Trainer:
                             torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                             torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
 
-                self.evaluate()
-                output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
-                self.save_model(output_dir)
-
                 if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                     epoch_iterator.close()
                     break
+
+            self.evaluate()
+            output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+            self.save_model(output_dir)
             if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                 train_iterator.close()
                 break
