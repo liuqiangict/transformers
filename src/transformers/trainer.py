@@ -248,6 +248,8 @@ class Trainer:
                 else DistributedSampler(self.train_dataset)
             )
 
+        train_sampler = SequentialSampler(self.train_dataset)
+
         data_loader = DataLoader(
             self.train_dataset,
             batch_size=self.args.train_batch_size,
@@ -475,11 +477,19 @@ class Trainer:
                 epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=not self.is_local_master())
 
             for step, inputs in enumerate(epoch_iterator):
-
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
                     continue
+
+                #batch = tuple(t.to(args.device) for t in batch)
+                #inputs = {
+                #            'input_ids':        batch[1],
+                #            'attention_mask':   batch[2],
+                #            'token_type_ids':   batch[3],
+                #            'start_positions':  batch[4],
+                #            'end_positions':    batch[5],
+                #}
 
                 tr_loss += self._training_step(model, inputs, optimizer)
 
@@ -548,14 +558,13 @@ class Trainer:
                         elif self.is_world_master():
                             torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                             torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
-
-                self.evaluate()
-                output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
-                self.save_model(output_dir)
-
                 if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                     epoch_iterator.close()
                     break
+
+            self.evaluate()
+            output_dir = os.path.join(self.args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-{self.global_step}")
+            self.save_model(output_dir)
             if self.args.max_steps > 0 and self.global_step > self.args.max_steps:
                 train_iterator.close()
                 break
@@ -587,8 +596,8 @@ class Trainer:
         self, model: nn.Module, inputs: Dict[str, torch.Tensor], optimizer: torch.optim.Optimizer
     ) -> float:
         model.train()
-        for k, v in inputs.items():
-            inputs[k] = v.to(self.args.device)
+        #for k, v in inputs.items():
+        #    inputs[k] = v.to(self.args.device)
 
         outputs = model(**inputs)
         loss = outputs[0]  # model outputs are always tuple in transformers (see doc)

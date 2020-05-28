@@ -36,6 +36,7 @@ from transformers import (
     glue_tasks_num_labels,
     set_seed,
 )
+from transformers.data_loader import DTDataset, DeepThinkDataset
 
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,10 @@ def main():
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    print(data_args)
+    print(model_args)
+    print(training_args)
 
     if (
         os.path.exists(training_args.output_dir)
@@ -134,9 +139,13 @@ def main():
     )
 
     # Get datasets
-    train_dataset = GlueDataset(data_args, tokenizer=tokenizer) if training_args.do_train else None
-    eval_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="dev") if training_args.do_eval else None
-    test_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="test") if training_args.do_predict else None
+    #train_dataset = GlueDataset(data_args, tokenizer=tokenizer) if training_args.do_train else None
+    #eval_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="dev") if training_args.do_eval else None
+    #test_dataset = GlueDataset(data_args, tokenizer=tokenizer, mode="test") if training_args.do_predict else None
+    train_examples = DeepThinkDataset(data_args.input_train_dir)
+    train_dataset = DTDataset(tokenizer, train_examples, data_args.max_seq_length)
+    eval_examples = DeepThinkDataset(data_args.input_eval_dir)
+    eval_dataset = DTDataset(tokenizer, eval_examples, data_args.max_seq_length)
 
     def compute_metrics(p: EvalPrediction) -> Dict:
         if output_mode == "classification":

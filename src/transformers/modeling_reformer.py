@@ -1911,6 +1911,7 @@ class ReformerForQuestionAnswering(ReformerPreTrainedModel):
     @add_start_docstrings_to_callable(REFORMER_INPUTS_DOCSTRING)
     def forward(
         self,
+        guids=None,
         input_ids=None,
         attention_mask=None,
         token_type_ids=None,

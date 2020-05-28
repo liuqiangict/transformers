@@ -1440,17 +1440,20 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
     def encode_plus(
         self,
-        text: Union[TextInput, PreTokenizedInput, EncodedInput],
-        text_pair: Optional[Union[TextInput, PreTokenizedInput, EncodedInput]] = None,
+        guid: int,
+        query: str,
+        docs: List[str],
+        start_idx: int,
+        end_idx: int,
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
         stride: int = 0,
         truncation_strategy: str = "longest_first",
-        pad_to_max_length: bool = False,
+        pad_to_max_length: bool = True,
         is_pretokenized: bool = False,
         return_tensors: Optional[str] = None,
-        return_token_type_ids: Optional[bool] = None,
-        return_attention_mask: Optional[bool] = None,
+        return_token_type_ids: Optional[bool] = True,
+        return_attention_mask: Optional[bool] = True,
         return_overflowing_tokens: bool = False,
         return_special_tokens_mask: bool = False,
         return_offsets_mapping: bool = False,
@@ -1575,12 +1578,20 @@ class PreTrainedTokenizer(SpecialTokensMixin):
                 "or add a new pad token via the function add_special_tokens if you want to use a padding strategy"
             )
 
-        first_ids = get_input_ids(text)
-        second_ids = get_input_ids(text_pair) if text_pair is not None else None
+
+        assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
+        assert end_idx >= start_idx and end_idx <= len(docs), "Incorrect start index."
+        input_ids = [get_input_ids(query)]
+        start_idx += 1
+        end_idx += 1
+        for doc in docs:
+            input_ids.append(get_input_ids(doc))
 
         return self.prepare_for_model(
-            first_ids,
-            pair_ids=second_ids,
+            guid,
+            input_ids,
+            start_idx,
+            end_idx,
             max_length=max_length,
             pad_to_max_length=pad_to_max_length,
             add_special_tokens=add_special_tokens,
@@ -1738,12 +1749,16 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         for ids_or_pair_ids in batch_text_or_text_pairs:
             if isinstance(ids_or_pair_ids, (list, tuple)) and len(ids_or_pair_ids) == 4 and not is_pretokenized:
                 guid = ids_or_pair_ids[0]
-                start_idx = int(ids_or_pair_ids[2])
-                end_idx = int(ids_or_pair_ids[3])
+                start_idx = ids_or_pair_ids[3]
+                end_idx = ids_or_pair_ids[4]
                 assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
                 assert end_idx >= start_idx and end_idx < len(ids_or_pair_ids[1]), "Incorrect start index."
-                input_id = []
-                for doc in ids_or_pair_ids[1]:
+                query = ids_or_pair_ids[1]
+                docs = ids_or_pair_ids[2]
+                input_id = [get_input_ids(query)]
+                start_idx += 1
+                end_idx += 1
+                for doc in docs:
                     input_id.append(get_input_ids(doc))
                 input_ids.append((guid, input_id, start_idx, end_idx))
             else:
@@ -1834,7 +1849,7 @@ class PreTrainedTokenizer(SpecialTokensMixin):
 
     def prepare_for_model(
         self,
-        guid: str,
+        guid: int,
         ids: List[List[int]],
         start_idx: int,
         end_idx: int,
@@ -1939,8 +1954,8 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         # Add special tokens
         if add_special_tokens:
             sequence, token_type_ids, start_pos, end_pos = self.build_inputs_with_special_tokens(ids, start_idx, end_idx)
-            if start_pos == -1:
-                return None
+            #if start_pos == -1:
+            #    return None
             #token_type_ids = self.create_token_type_ids_from_sequences(ids)
             encoded_inputs["start_pos"] = start_pos
             encoded_inputs["end_pos"] = end_pos
@@ -2010,7 +2025,6 @@ class PreTrainedTokenizer(SpecialTokensMixin):
         else:
             if return_attention_mask:
                 encoded_inputs["attention_mask"] = [1] * len(encoded_inputs["input_ids"])
-
         if return_lengths:
             encoded_inputs["length"] = len(encoded_inputs["input_ids"])
 
