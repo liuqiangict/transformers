@@ -1441,7 +1441,6 @@ class PreTrainedTokenizer(SpecialTokensMixin):
     def encode_plus(
         self,
         guid: int,
-        query: str,
         docs: List[str],
         start_idx: int,
         end_idx: int,
@@ -1579,11 +1578,9 @@ class PreTrainedTokenizer(SpecialTokensMixin):
             )
 
 
-        assert start_idx >= 0 and start_idx <= end_idx, "Incorrect start index."
-        assert end_idx >= start_idx and end_idx <= len(docs), "Incorrect start index."
-        input_ids = [get_input_ids(query)]
-        start_idx += 1
-        end_idx += 1
+        assert start_idx >= 1 and start_idx <= end_idx, "Incorrect start index."
+        assert end_idx >= start_idx and end_idx < len(docs), "Incorrect start index."
+        input_ids = []
         for doc in docs:
             input_ids.append(get_input_ids(doc))
 

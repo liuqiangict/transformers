@@ -43,11 +43,10 @@ class DTDataset(Dataset):
 
     def __getitem__(self, index):
 
-        guid, query, doc_list, start_idx, end_idx = self.data.all_pairs[index]
+        guid, docs, start_idx, end_idx = self.data.all_pairs[index]
         inputs = self.tokenizer.encode_plus(
             guid,
-            query,
-            doc_list,
+            docs,
             start_idx,
             end_idx,
             max_length=self.max_seq_len
@@ -82,13 +81,14 @@ class DeepThinkDataset:
                 if len(cols) != 6:
                     continue
                 guid = int(cols[0])
-                query = cols[1]
+                docs = [cols[1]]
                 json_docs = json.loads(cols[2])
-                docs = [doc['Text'] for doc in json_docs]
-                start_idx = int(cols[4])
-                end_idx = int(cols[5])
+                for doc in json_docs:
+                    docs.append(doc['Text'])
+                start_idx = int(cols[4]) + 1
+                end_idx = int(cols[5]) + 1
 
-                all_pairs.append([guid, query, docs, start_idx, end_idx])
+                all_pairs.append([guid, docs, start_idx, end_idx])
                 if i > readin:
                     break
         
