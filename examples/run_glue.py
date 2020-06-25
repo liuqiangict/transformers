@@ -383,7 +383,8 @@ def predict(args, model, tokenizer, prefix, tasks):
         logger.info("***** Running evaluation {} *****".format(prefix))
         logger.info("  Num examples = %d", len(eval_dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
-        output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
+        #output_eval_file = os.path.join(args.output_dir, "predict_" + eval_name + "_" + prefix + ".tsv")
+        output_eval_file = args.output_eval_file
         with open(output_eval_file, "w") as writer:
             processed = 0
             for batch in tqdm(eval_dataloader, desc="Evaluating"):
@@ -487,7 +488,9 @@ def main():
     ## Required parameters
     parser.add_argument("--input_train_dir", default=None, type=str,
                         help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
-    parser.add_argument("--input_eval_dir", default=None, type=str, 
+    parser.add_argument("--input_eval_file", default=None, type=str, 
+                        help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
+    parser.add_argument("--output_eval_file", default=None, type=str, 
                         help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
     parser.add_argument("--model_type", default=None, type=str, required=True,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
@@ -711,14 +714,14 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    ('qp', 'google', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/google/google_eval.tsv'),
-                    ('qp', 'bing_ann', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/bing_ann/bing_eval'),
-                    ('qp', 'uhrs', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/uhrs/uhrs_eval.tsv'),
-                    ('qp', 'panelone_5k', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/panelone_5k/panelone_5k_eval.tsv'),
-                    ('qp', 'adverserial', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/adverserial/adverserial_eval_rownum.tsv'),
+                    #('qp', 'google', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/google/google_eval.tsv'),
+                    #('qp', 'bing_ann', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/bing_ann/bing_eval'),
+                    #('qp', 'uhrs', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/uhrs/uhrs_eval.tsv'),
+                    #('qp', 'panelone_5k', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/panelone_5k/panelone_5k_eval.tsv'),
+                    #('qp', 'adverserial', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/adverserial/adverserial_eval_rownum.tsv'),
                     #('qp', 'image_' + args.predict_number, './data/image_score/80/' + args.predict_number),
                     #('qp', 'deepvote_' + args.predict_number, './data/Deepvote/source_data/' + args.predict_number),
-
+                    ('qp', 'data', args.input_eval_file)
                 ]
         predict(args, model, tokenizer, args.predict_number, tasks)
         '''
