@@ -29,6 +29,7 @@ from sklearn.metrics import roc_auc_score
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
+from data_loader import QADataset, QueryPassageFineTuningDataset
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -365,6 +366,10 @@ def predict(args, model, tokenizer, prefix, tasks):
     aucs = []
     for eval_task, eval_name, eval_input_dir in tasks:
         #eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
+
+        eval_examples = QueryPassageFineTuningDataset(eval_input_dir, mode='eval')
+        eval_dataset = QADataset(tokenizer, eval_examples, args.max_seq_length)
+
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
@@ -715,7 +720,7 @@ def main():
                     #('qp', 'deepvote_' + args.predict_number, './data/Deepvote/source_data/' + args.predict_number),
 
                 ]
-        predict(args, model, tokenizer, '', tasks)
+        predict(args, model, tokenizer, args.predict_number, tasks)
         '''
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
