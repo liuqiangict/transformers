@@ -364,7 +364,7 @@ def predict(args, model, tokenizer, prefix, tasks):
     model.eval()
     aucs = []
     for eval_task, eval_name, eval_input_dir in tasks:
-        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
+        #eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate=True, eval_dir=eval_input_dir, eval_name=eval_name)
 
         if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(args.output_dir)
@@ -399,14 +399,14 @@ def predict(args, model, tokenizer, prefix, tasks):
                 guids = batch[0].detach().cpu().numpy()
                 labels = inputs['labels'].detach().cpu().numpy()
                 preds = logits.detach().cpu().numpy()
-                soft_preds = softmax_logits.detach().cpu().numpy()
+                #soft_preds = softmax_logits.detach().cpu().numpy()
                 for i, guid in enumerate(guids):
                     writer.write(str(guid)
-                                    #+ '\t' + str(labels[i]) 
+                                    + '\t' + str(labels[i]) 
                                     + '\t' + str(preds[i][0]) 
-                                    + '\t' + str(preds[i][1]) 
-                                    + '\t' + str(soft_preds[i][0]) 
-                                    + '\t' + str(soft_preds[i][1]) 
+                                    #+ '\t' + str(preds[i][1]) 
+                                    #+ '\t' + str(soft_preds[i][0]) 
+                                    #+ '\t' + str(soft_preds[i][1]) 
                                     +'\n' )
                 processed += 1
                 if processed % 1000 == 0:
@@ -706,33 +706,23 @@ def main():
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
         results = {}
         tasks = [
-                    #('qp', 'google', './data/Universial/eval/google/'),
-                    #('qp', 'bing_ann', './data/Universial/eval/bing_ann/'),
-                    #('qp', 'uhrs', './data/Universial/eval/uhrs/'),
-                    #('qp', 'de_de', './data/Universial/eval/de_de/'),
-                    #('qp', 'fr_fr', './data/Universial/eval/fr_fr/'),
-                    #('qp', 'panelone_5k', './data/eval/panelone_5k/'),
-                    #('qp', 'adverserial', './data/eval/adverserial/'),
-                    #('qp', './data/eval/speller_checked/'),
-                    #('qp', './data/eval/speller_usertyped/')
-                    #('qp', 'L4_23', './data/predict_l4_24/23'),
-                    #('qp', 'inter', './data/intermediate/sample.tsv'),
-                    #('qp', 'uhrs_score', './data/uhrs/uhrs_train'),
-                    #('qp', 'uhrs_quantus_score', './data/uhrs_quantus/uhrs_quantus_all'),
-                    #('qp', 'quantus_pointwise', './data/Caption/quantus/eval/pointwise/quantus.pointwise.dev.data'),
-                    #('qp', 'quantus_pairwise', './data/Caption/quantus/eval/pairwise/quantus.pairwise.dev.data'),
-                    #('qp', 'sbs', './data/Caption/sbs/eval/pointwise/sbs_sep_2019.pointwise.dev.tsv'),
-                    #('qp', 'malta', './data/Caption/Malta/eval/pointwise/malta.pointwise.dev.tsv'),
-                    #('qp', 'maroc', './data/Caption/Marco/eval/pointwise/marco.pointwise.dev.tsv'),
+                    ('qp', 'google', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/google/google_eval.tsv'),
+                    ('qp', 'bing_ann', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/bing_ann/bing_eval'),
+                    ('qp', 'uhrs', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/uhrs/uhrs_eval.tsv'),
+                    ('qp', 'panelone_5k', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/panelone_5k/panelone_5k_eval.tsv'),
+                    ('qp', 'adverserial', '/home/qiangliu/Git/Mine/transformers/examples/data/eval/adverserial/adverserial_eval_rownum.tsv'),
                     #('qp', 'image_' + args.predict_number, './data/image_score/80/' + args.predict_number),
-                    ('qp', 'deepvote_' + args.predict_number, './data/Deepvote/source_data/' + args.predict_number),
+                    #('qp', 'deepvote_' + args.predict_number, './data/Deepvote/source_data/' + args.predict_number),
 
                 ]
+        predict(args, model, tokenizer, '', tasks)
+        '''
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1]
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
-            predict(args, model, tokenizer, global_step, tasks)
+            predict(args, model, tokenizer, '', tasks)
+        '''
 
     return results
 
