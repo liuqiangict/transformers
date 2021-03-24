@@ -14,21 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
-
-import copy
 import csv
 import dataclasses
 import json
-import logging
 from dataclasses import dataclass
 from typing import List, Optional, Union
 
 from ...file_utils import is_tf_available, is_torch_available
+from ...utils import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
 
 
 @dataclass
@@ -59,20 +55,19 @@ class InputExample:
 @dataclass(frozen=True)
 class InputFeatures:
     """
-    A single set of features of data.
-    Property names are the same names as the corresponding inputs to a model.
+    A single set of features of data. Property names are the same names as the corresponding inputs to a model.
 
     Args:
         input_ids: Indices of input sequence tokens in the vocabulary.
         attention_mask: Mask to avoid performing attention on padding token indices.
-            Mask values selected in ``[0, 1]``:
-            Usually  ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded) tokens.
+            Mask values selected in ``[0, 1]``: Usually ``1`` for tokens that are NOT MASKED, ``0`` for MASKED (padded)
+            tokens.
         token_type_ids: (Optional) Segment token indices to indicate first and second
             portions of the inputs. Only some models use them.
         label: (Optional) Label corresponding to the input. Int for classification problems,
             float for regression problems.
     """
-    guids: str
+
     input_ids: List[int]
     attention_mask: Optional[List[int]] = None
     token_type_ids: Optional[List[int]] = None
@@ -87,7 +82,9 @@ class DataProcessor:
     """Base class for data converters for sequence classification data sets."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
-        """Gets an example from a dict with tensorflow tensors
+        """
+        Gets an example from a dict with tensorflow tensors.
+
         Args:
             tensor_dict: Keys and values should match the corresponding Glue
                 tensorflow_dataset examples.
@@ -95,11 +92,15 @@ class DataProcessor:
         raise NotImplementedError()
 
     def get_train_examples(self, data_dir):
-        """Gets a collection of `InputExample`s for the train set."""
+        """Gets a collection of :class:`InputExample` for the train set."""
         raise NotImplementedError()
 
     def get_dev_examples(self, data_dir):
-        """Gets a collection of `InputExample`s for the dev set."""
+        """Gets a collection of :class:`InputExample` for the dev set."""
+        raise NotImplementedError()
+
+    def get_test_examples(self, data_dir):
+        """Gets a collection of :class:`InputExample` for the test set."""
         raise NotImplementedError()
 
     def get_labels(self):
@@ -107,8 +108,10 @@ class DataProcessor:
         raise NotImplementedError()
 
     def tfds_map(self, example):
-        """Some tensorflow_datasets datasets are not formatted the same way the GLUE datasets are.
-        This method converts examples to the correct format."""
+        """
+        Some tensorflow_datasets datasets are not formatted the same way the GLUE datasets are. This method converts
+        examples to the correct format.
+        """
         if len(self.get_labels()) > 1:
             example.label = self.get_labels()[int(example.label)]
         return example
@@ -118,24 +121,6 @@ class DataProcessor:
         """Reads a tab separated value file."""
         with open(input_file, "r", encoding="utf-8-sig") as f:
             return list(csv.reader(f, delimiter="\t", quotechar=quotechar))
-
-    @classmethod
-    def _read_tsv_from_dir(cls, input_dir, quotechar=None):
-        """Reads a tab separated value file."""
-        
-        input_files = [file for file in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, file))]
-        lines = []
-        for input_file in input_files:
-            if input_file.startswith('cache'):
-                continue
-            with open(os.path.join(input_dir, input_file), "r", encoding="utf-8-sig") as f:
-                reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-                for line in reader:
-                    if sys.version_info[0] == 2:
-                        line = list(unicode(cell, 'utf-8') for cell in line)
-                    lines.append(line)
-        return lines
-
 
 
 class SingleSentenceClassificationProcessor(DataProcessor):
@@ -211,8 +196,12 @@ class SingleSentenceClassificationProcessor(DataProcessor):
     def add_examples(
         self, texts_or_text_and_labels, labels=None, ids=None, overwrite_labels=False, overwrite_examples=False
     ):
-        assert labels is None or len(texts_or_text_and_labels) == len(labels)
-        assert ids is None or len(texts_or_text_and_labels) == len(ids)
+        assert labels is None or len(texts_or_text_and_labels) == len(
+            labels
+        ), f"Text and labels have mismatched lengths {len(texts_or_text_and_labels)} and {len(labels)}"
+        assert ids is None or len(texts_or_text_and_labels) == len(
+            ids
+        ), f"Text and ids have mismatched lengths {len(texts_or_text_and_labels)} and {len(ids)}"
         if ids is None:
             ids = [None] * len(texts_or_text_and_labels)
         if labels is None:
@@ -256,9 +245,6 @@ class SingleSentenceClassificationProcessor(DataProcessor):
         Args:
             tokenizer: Instance of a tokenizer that will tokenize the examples
             max_length: Maximum example length
-            task: GLUE task
-            label_list: List of labels. Can be obtained from the processor using the ``processor.get_labels()`` method
-            output_mode: String indicating the output mode. Either ``regression`` or ``classification``
             pad_on_left: If set to ``True``, the examples will be padded on the left rather than on the right (default)
             pad_token: Padding token
             mask_padding_with_zero: If set to ``True``, the attention mask will be filled by ``1`` for actual values
@@ -266,9 +252,9 @@ class SingleSentenceClassificationProcessor(DataProcessor):
                 actual values)
 
         Returns:
-            If the ``examples`` input is a ``tf.data.Dataset``, will return a ``tf.data.Dataset``
-            containing the task-specific features. If the input is a list of ``InputExamples``, will return
-            a list of task-specific ``InputFeatures`` which can be fed to the model.
+            If the ``examples`` input is a ``tf.data.Dataset``, will return a ``tf.data.Dataset`` containing the
+            task-specific features. If the input is a list of ``InputExamples``, will return a list of task-specific
+            ``InputFeatures`` which can be fed to the model.
 
         """
         if max_length is None:
@@ -282,7 +268,9 @@ class SingleSentenceClassificationProcessor(DataProcessor):
                 logger.info("Tokenizing example %d", ex_index)
 
             input_ids = tokenizer.encode(
-                example.text_a, add_special_tokens=True, max_length=min(max_length, tokenizer.max_len),
+                example.text_a,
+                add_special_tokens=True,
+                max_length=min(max_length, tokenizer.max_len),
             )
             all_input_ids.append(input_ids)
 
@@ -326,7 +314,7 @@ class SingleSentenceClassificationProcessor(DataProcessor):
                 logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
                 logger.info("label: %s (id = %d)" % (example.label, label))
 
-            features.append(InputFeatures(guids=example.guid, input_ids=input_ids, attention_mask=attention_mask, label=label))
+            features.append(InputFeatures(input_ids=input_ids, attention_mask=attention_mask, label=label))
 
         if return_tensors is None:
             return features
@@ -337,12 +325,12 @@ class SingleSentenceClassificationProcessor(DataProcessor):
 
             def gen():
                 for ex in features:
-                    yield ({"guids": ex.guid, "input_ids": ex.input_ids, "attention_mask": ex.attention_mask}, ex.label)
+                    yield ({"input_ids": ex.input_ids, "attention_mask": ex.attention_mask}, ex.label)
 
             dataset = tf.data.Dataset.from_generator(
                 gen,
-                ({"guids": tf.int32, "input_ids": tf.int32, "attention_mask": tf.int32}, tf.int64),
-                ({"guids": tf.TensorShape([None]), "input_ids": tf.TensorShape([None]), "attention_mask": tf.TensorShape([None])}, tf.TensorShape([])),
+                ({"input_ids": tf.int32, "attention_mask": tf.int32}, tf.int64),
+                ({"input_ids": tf.TensorShape([None]), "attention_mask": tf.TensorShape([None])}, tf.TensorShape([])),
             )
             return dataset
         elif return_tensors == "pt":
@@ -351,7 +339,6 @@ class SingleSentenceClassificationProcessor(DataProcessor):
             import torch
             from torch.utils.data import TensorDataset
 
-            all_guids = torch.tensor([f.guid for f in features], dtype=torch.long)
             all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
             all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
             if self.mode == "classification":
@@ -359,7 +346,7 @@ class SingleSentenceClassificationProcessor(DataProcessor):
             elif self.mode == "regression":
                 all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
-            dataset = TensorDataset(all_guids, all_input_ids, all_attention_mask, all_labels)
+            dataset = TensorDataset(all_input_ids, all_attention_mask, all_labels)
             return dataset
         else:
             raise ValueError("return_tensors should be one of 'tf' or 'pt'")
