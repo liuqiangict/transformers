@@ -71,7 +71,7 @@ def parse_args():
         "--validation_file", type=str, default=None, help="A csv or a json file containing the validation data."
     )
     parser.add_argument(
-        "--max_seq_length",
+        "--max_length",
         type=int,
         default=128,
         help=(
@@ -222,13 +222,13 @@ def main():
             num_labels = 1
     else:
         # Trying to have good defaults here, don't hesitate to tweak to your needs.
-        is_regression = raw_datasets["train"].features["label"].dtype in ["float32", "float64"]
+        is_regression = datasets["train"].features["label"].dtype in ["float32", "float64"]
         if is_regression:
             num_labels = 1
         else:
             # A useful fast method:
             # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.unique
-            label_list = raw_datasets["train"].unique("label")
+            label_list = datasets["train"].unique("label")
             label_list.sort()  # Let's sort it for determinism
             num_labels = len(label_list)
 
@@ -249,11 +249,9 @@ def main():
         sentence1_key, sentence2_key = task_to_keys[args.task_name]
     else:
         # Again, we try to have some nice defaults but don't hesitate to tweak to your use case.
-        non_label_column_names = [name for name in raw_datasets["train"].column_names if name != "label"]
+        non_label_column_names = [name for name in datasets["train"].column_names if name != "label"]
         if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
             sentence1_key, sentence2_key = "sentence1", "sentence2"
-        elif "query" in non_label_column_names and "answer" in non_label_column_names:
-            sentence1_key, sentence2_key = "query", "answer"
         else:
             if len(non_label_column_names) >= 2:
                 sentence1_key, sentence2_key = non_label_column_names[:2]
@@ -291,7 +289,7 @@ def main():
         texts = (
             (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
         )
-        result = tokenizer(*texts, padding=padding, max_length=args.max_seq_length, truncation=True)
+        result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
 
         if "label" in examples:
             if label_to_id is not None:
@@ -300,7 +298,6 @@ def main():
             else:
                 # In all cases, rename the column to labels because the model will expect that.
                 result["labels"] = examples["label"]
-        #result["guid"] = examples["guid"]
         return result
 
     processed_datasets = raw_datasets.map(
@@ -382,12 +379,12 @@ def main():
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
     # Only show the progress bar once on each machine.
-    #progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
-    global_steps = 0
+    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    completed_steps = 0
 
-    for epoch in tqdm(range(args.num_train_epochs)):
+    for epoch in range(args.num_train_epochs):
         model.train()
-        for step, batch in tqdm(enumerate(train_dataloader)):
+        for step, batch in enumerate(train_dataloader):
             outputs = model(**batch)
             loss = outputs.loss
             loss = loss / args.gradient_accumulation_steps
@@ -396,15 +393,14 @@ def main():
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
-                #progress_bar.update(1)
-                global_steps += 1
+                progress_bar.update(1)
+                completed_steps += 1
 
-
-            if global_steps >= args.max_train_steps:
+            if completed_steps >= args.max_train_steps:
                 break
 
         model.eval()
-        for step, batch in tqdm(enumerate(eval_dataloader)):
+        for step, batch in enumerate(eval_dataloader):
             outputs = model(**batch)
             predictions = outputs.logits.argmax(dim=-1)
             metric.add_batch(
