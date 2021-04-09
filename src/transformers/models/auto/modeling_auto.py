@@ -257,6 +257,11 @@ from ..xlnet.modeling_xlnet import (
     XLNetLMHeadModel,
     XLNetModel,
 )
+from ..unilm.modeling_unilm import (
+    UniLMForQuestionAnswering,
+    UniLMForSequenceClassification,
+    UniLMModel,
+)
 from .configuration_auto import (
     AlbertConfig,
     AutoConfig,
@@ -305,6 +310,7 @@ from .configuration_auto import (
     XLMProphetNetConfig,
     XLMRobertaConfig,
     XLNetConfig,
+    UniLMConfig,
     replace_list_option_in_docstrings,
 )
 
@@ -361,6 +367,7 @@ MODEL_MAPPING = OrderedDict(
         (TapasConfig, TapasModel),
         (MarianConfig, MarianModel),
         (IBertConfig, IBertModel),
+        (UniLMConfig, UniLMModel),
     ]
 )
 
@@ -552,6 +559,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING = OrderedDict(
         (MPNetConfig, MPNetForSequenceClassification),
         (TapasConfig, TapasForSequenceClassification),
         (IBertConfig, IBertForSequenceClassification),
+        (UniLMConfig, UniLMForSequenceClassification),
     ]
 )
 

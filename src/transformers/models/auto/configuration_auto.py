@@ -74,6 +74,7 @@ from ..xlm_prophetnet.configuration_xlm_prophetnet import (
 )
 from ..xlm_roberta.configuration_xlm_roberta import XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMRobertaConfig
 from ..xlnet.configuration_xlnet import XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP, XLNetConfig
+from ..unilm.configuration_unilm import UNILM_PRETRAINED_CONFIG_ARCHIVE_MAP, UniLMConfig
 
 
 ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = dict(
@@ -174,6 +175,7 @@ CONFIG_MAPPING = OrderedDict(
         ("layoutlm", LayoutLMConfig),
         ("rag", RagConfig),
         ("tapas", TapasConfig),
+        ("unilm", UniLMConfig),
     ]
 )
 
@@ -227,6 +229,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("mt5", "mT5"),
         ("mpnet", "MPNet"),
         ("tapas", "TAPAS"),
+        ("unilm", "UniLM"),
     ]
 )
 
