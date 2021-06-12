@@ -1195,7 +1195,8 @@ class Trainer:
             self._report_to_hp_search(trial, epoch, metrics)
 
         if self.control.should_save:
-            self._save_checkpoint(model, trial, metrics=metrics)
+            #self._save_checkpoint(model, trial, metrics=metrics)
+            self._save_checkpoint(model, trial)
             self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 
     def _save_checkpoint(self, model, trial, metrics=None):
@@ -1670,8 +1671,10 @@ class Trainer:
             metric_key_prefix=metric_key_prefix,
         )
         #print(output)
-        #with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
-        #    writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
+        with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
+            #writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
+            for i in range(len(output.predictions)): 
+                writer.write(json.dumps({'preds': output.predictions[i].tolist(), 'labels': output.label_ids[i].tolist()}) + '\n')
 
         n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
         output.metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))

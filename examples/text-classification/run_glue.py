@@ -276,6 +276,9 @@ def main():
     else:
         # Trying to have good defaults here, don't hesitate to tweak to your needs.
         is_regression = datasets["train"].features["label"].dtype in ["float32", "float64"]
+        is_regression = True
+        logger.info('*' * 150)
+        logger.info('is_regression: ' + str(is_regression))
         if is_regression:
             num_labels = 1
         else:
@@ -372,7 +375,8 @@ def main():
 
         # Map labels to IDs (not necessary for GLUE tasks)
         if label_to_id is not None and "label" in examples:
-            result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+            #result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+            result["label"] = examples["label"]
         result['guid'] = examples['guid']
         return result
 
@@ -414,20 +418,20 @@ def main():
     def compute_metrics(p: EvalPrediction):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
-        probabilities = [pred[1] for pred in preds]
-        softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
-        softmax_probabilities = [pred[1] for pred in softmax_preds]
+        probabilities = [pred for pred in preds]
+        #softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
+        #softmax_probabilities = [pred[1] for pred in softmax_preds]
         if data_args.task_name is not None:
             result = metric.compute(predictions=preds, references=p.label_ids)
             if len(result) > 1:
                 result["combined_score"] = np.mean(list(result.values())).item()
             return result
-        elif is_regression:
-            return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
+        #elif is_regression:
+        #    return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
         else:
             #return {"accuracy": (preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, preds).mean().item()}
-            #return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
-            return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
+            return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
+            #return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:

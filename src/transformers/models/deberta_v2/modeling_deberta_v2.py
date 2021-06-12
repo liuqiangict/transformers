@@ -1239,6 +1239,7 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
 
         num_labels = getattr(config, "num_labels", 2)
         self.num_labels = num_labels
+        print('self.num_labels', self.num_labels)
 
         self.deberta = DebertaV2Model(config)
         self.pooler = ContextPooler(config)
@@ -1305,8 +1306,10 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             if self.num_labels == 1:
                 # regression task
                 loss_fn = torch.nn.MSELoss()
-                logits = logits.view(-1).to(labels.dtype)
-                loss = loss_fn(logits, labels.view(-1))
+                #logits = logits.view(-1).to(labels.dtype)
+                loss = loss_fn(logits.view(-1, 1), labels.float().view(-1, 1))
+                #loss_fct =torch.nn.BCEWithLogitsLoss()
+                #loss = loss_fct(logits.view(-1, 1), labels.float().view(-1, 1))
             elif labels.dim() == 1 or labels.size(-1) == 1:
                 label_index = (labels >= 0).nonzero()
                 labels = labels.long()
