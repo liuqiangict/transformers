@@ -26,6 +26,7 @@ import shutil
 import sys
 import time
 import warnings
+import json
 from logging import StreamHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
@@ -1668,6 +1669,11 @@ class Trainer:
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
         )
+        #print(output)
+        with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
+            for i in range(len(output.predictions)):
+                writer.write(json.dumps({'preds': output.predictions[i].tolist(), 'labels': output.label_ids[i].tolist()}) + '\n')
+            #writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
 
         n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
         output.metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))
