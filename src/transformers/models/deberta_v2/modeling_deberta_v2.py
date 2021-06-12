@@ -1237,7 +1237,8 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        num_labels = getattr(config, "num_labels", 2)
+        #num_labels = getattr(config, "num_labels", 2)
+        num_labels = 1
         self.num_labels = num_labels
 
         self.deberta = DebertaV2Model(config)
@@ -1266,9 +1267,12 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     )
     def forward(
         self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
+        input_ids_a=None,
+        attention_mask_a=None,
+        token_type_ids_a=None,
+        input_ids_b=None,
+        attention_mask_b=None,
+        token_type_ids_b=None,
         position_ids=None,
         inputs_embeds=None,
         labels=None,
@@ -1284,10 +1288,10 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.deberta(
-            input_ids,
-            token_type_ids=token_type_ids,
-            attention_mask=attention_mask,
+        outputs_a = self.deberta(
+            input_ids_a,
+            token_type_ids=token_type_ids_a,
+            attention_mask=attention_mask_a,
             position_ids=position_ids,
             inputs_embeds=inputs_embeds,
             output_attentions=output_attentions,
@@ -1295,11 +1299,41 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
             return_dict=return_dict,
         )
 
-        encoder_layer = outputs[0]
-        pooled_output = self.pooler(encoder_layer)
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        outputs_b = self.deberta(
+            input_ids_b,
+            token_type_ids=token_type_ids_b,
+            attention_mask=attention_mask_b,
+            position_ids=position_ids,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
+        encoder_layer_a = outputs_a[0]
+        encoder_layer_b = outputs_b[0]
+
+        pooled_output_a = self.pooler(encoder_layer_a)
+        pooled_output_b = self.pooler(encoder_layer_b)
+
+        pooled_output_a = self.dropout(pooled_output_a)
+        pooled_output_b = self.dropout(pooled_output_b)
+
+        logits_a = self.classifier(pooled_output_a)
+        logits_b = self.classifier(pooled_output_b)
+
+        logits = torch.cat([logits_a, logits_b], 1)
+        #loss_fct = nn.CrossEntropyLoss()
+        loss_fct = nn.MarginRankingLoss()
+        #loss = loss_fct(logits.view(-1, 2), labels.view(-1, 1).squeeze(1))
+        loss = loss_fct(logits_a.view(-1, 1).squeeze(1), logits_b.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
+
+        outputs = (loss, logits)
+
+        return outputs 
+
+
+        ''' 
         loss = None
         if labels is not None:
             if self.num_labels == 1:
@@ -1330,6 +1364,7 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
                 hidden_states=outputs.hidden_states,
                 attentions=outputs.attentions,
             )
+        '''
 
 
 @add_start_docstrings(

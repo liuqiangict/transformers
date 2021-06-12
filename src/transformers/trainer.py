@@ -29,7 +29,6 @@ import warnings
 from logging import StreamHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-import json
 
 
 # Integrations must be imported before ML frameworks:
@@ -375,11 +374,11 @@ class Trainer:
             raise ValueError("eval_dataset must implement __len__")
 
         self._signature_columns = None
-        if is_datasets_available():
-            if isinstance(train_dataset, datasets.Dataset):
-                self._remove_unused_columns(self.train_dataset, description="training")
-            if isinstance(eval_dataset, datasets.Dataset):
-                self._remove_unused_columns(self.eval_dataset, description="evaluation")
+        #if is_datasets_available():
+        #    if isinstance(train_dataset, datasets.Dataset):
+        #        self._remove_unused_columns(self.train_dataset, description="training")
+        #    if isinstance(eval_dataset, datasets.Dataset):
+        #        self._remove_unused_columns(self.eval_dataset, description="evaluation")
 
         # Mixed precision setup
         self.use_apex = False
@@ -1669,9 +1668,6 @@ class Trainer:
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
         )
-        #print(output)
-        #with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
-        #    writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
 
         n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
         output.metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))
