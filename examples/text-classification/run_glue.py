@@ -421,7 +421,7 @@ def main():
         corre = 0
         for i in range(len(preds) // 2):
             total += 1
-            if pred[i * 2] >= pred[i * 2 + 1]:
+            if preds[i * 2] >= preds[i * 2 + 1]:
                 corre += 1
 
         return {"acc": corre / total}
