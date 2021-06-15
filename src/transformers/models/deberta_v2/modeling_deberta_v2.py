@@ -1237,7 +1237,8 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
 
-        num_labels = getattr(config, "num_labels", 2)
+        num_labels = 1
+        #num_labels = getattr(config, "num_labels", 2)
         self.num_labels = num_labels
 
         self.deberta = DebertaV2Model(config)
@@ -1299,7 +1300,9 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         pooled_output = self.pooler(encoder_layer)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
+        return logits
 
+        '''
         loss = None
         if labels is not None:
             if self.num_labels == 1:
@@ -1330,6 +1333,7 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
                 hidden_states=outputs.hidden_states,
                 attentions=outputs.attentions,
             )
+        '''
 
 
 @add_start_docstrings(

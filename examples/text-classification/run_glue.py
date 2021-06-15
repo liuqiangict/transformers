@@ -414,20 +414,8 @@ def main():
     def compute_metrics(p: EvalPrediction):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
-        probabilities = [pred[1] for pred in preds]
-        softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
-        softmax_probabilities = [pred[1] for pred in softmax_preds]
-        if data_args.task_name is not None:
-            result = metric.compute(predictions=preds, references=p.label_ids)
-            if len(result) > 1:
-                result["combined_score"] = np.mean(list(result.values())).item()
-            return result
-        elif is_regression:
-            return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
-        else:
-            #return {"accuracy": (preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, preds).mean().item()}
-            #return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
-            return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
+        probabilities = [pred[0] for pred in preds]
+        return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
