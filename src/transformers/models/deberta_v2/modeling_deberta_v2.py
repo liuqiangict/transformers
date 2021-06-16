@@ -1323,10 +1323,10 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         logits_b = self.classifier(pooled_output_b)
 
         logits = torch.cat([logits_a, logits_b], 1)
-        #loss_fct = nn.CrossEntropyLoss()
-        loss_fct = nn.MarginRankingLoss()
-        #loss = loss_fct(logits.view(-1, 2), labels.view(-1, 1).squeeze(1))
-        loss = loss_fct(logits_a.view(-1, 1).squeeze(1), logits_b.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
+        loss_fct = nn.CrossEntropyLoss()
+        loss = loss_fct(logits.view(-1, 2), labels.view(-1, 1).squeeze(1))
+        #loss_fct = nn.MarginRankingLoss()
+        #loss = loss_fct(logits_a.view(-1, 1).squeeze(1), logits_b.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
 
         outputs = (loss, logits)
 
