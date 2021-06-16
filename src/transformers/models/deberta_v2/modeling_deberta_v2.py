@@ -1326,7 +1326,7 @@ class DebertaV2ForSequenceClassification(DebertaV2PreTrainedModel):
         #loss_fct = nn.CrossEntropyLoss()
         loss_fct = nn.MarginRankingLoss()
         #loss = loss_fct(logits.view(-1, 2), labels.view(-1, 1).squeeze(1))
-        loss = loss_fct(logits_a.view(-1, 1).squeeze(1), logits_b.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
+        loss = loss_fct(logits_b.view(-1, 1).squeeze(1), logits_a.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
 
         outputs = (loss, logits)
 
