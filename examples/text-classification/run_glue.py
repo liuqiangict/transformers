@@ -424,7 +424,7 @@ def main():
     def compute_metrics(p: EvalPrediction):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
         bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
-        labels = [0 for label in p.label_ids]
+        labels = [1 for label in p.label_ids]
         #probabilities = [pred[1] for pred in preds]
         #softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
         #softmax_probabilities = [pred[1] for pred in softmax_preds]
