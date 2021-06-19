@@ -25,7 +25,7 @@ from typing import Optional, Tuple
 import torch
 import torch.utils.checkpoint
 from torch import nn
-from torch.nn import CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss, MSELoss, MultiLabelSoftMarginLoss
 
 from ...activations import ACT2FN
 from ...file_utils import (
@@ -1463,6 +1463,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
+        self.multi_target = True
 
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -1521,6 +1522,10 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 #  We are doing regression
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
+            elif self.multi_target:
+                #loss_fct = MultiLabelSoftMarginLoss(weight=loss_weights)
+                loss_fct = MultiLabelSoftMarginLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))

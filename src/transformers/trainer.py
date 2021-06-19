@@ -242,7 +242,7 @@ class Trainer:
         args: TrainingArguments = None,
         data_collator: Optional[DataCollator] = None,
         train_dataset: Optional[Dataset] = None,
-        eval_dataset: Optional[Dataset] = None,
+        eval_datasets: Optional[Dict[str, Dataset]] = None,
         tokenizer: Optional["PreTrainedTokenizerBase"] = None,
         model_init: Callable[[], PreTrainedModel] = None,
         compute_metrics: Optional[Callable[[EvalPrediction], Dict]] = None,
@@ -324,7 +324,7 @@ class Trainer:
         default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
         self.data_collator = data_collator if data_collator is not None else default_collator
         self.train_dataset = train_dataset
-        self.eval_dataset = eval_dataset
+        self.eval_datasets = eval_datasets
         self.tokenizer = tokenizer
 
         # postpone switching model to cuda when:
@@ -371,15 +371,15 @@ class Trainer:
         # Enforce rules on using datasets with no __len__
         if train_dataset is not None and not isinstance(train_dataset, collections.abc.Sized) and args.max_steps <= 0:
             raise ValueError("train_dataset does not implement __len__, max_steps has to be specified")
-        if eval_dataset is not None and not isinstance(eval_dataset, collections.abc.Sized):
-            raise ValueError("eval_dataset must implement __len__")
+        #if eval_dataset is not None and not isinstance(eval_dataset, collections.abc.Sized):
+        #    raise ValueError("eval_dataset must implement __len__")
 
         self._signature_columns = None
-        if is_datasets_available():
-            if isinstance(train_dataset, datasets.Dataset):
-                self._remove_unused_columns(self.train_dataset, description="training")
-            if isinstance(eval_dataset, datasets.Dataset):
-                self._remove_unused_columns(self.eval_dataset, description="evaluation")
+        #if is_datasets_available():
+        #    if isinstance(train_dataset, datasets.Dataset):
+        #        self._remove_unused_columns(self.train_dataset, description="training")
+        #    if isinstance(eval_dataset, datasets.Dataset):
+        #        self._remove_unused_columns(self.eval_dataset, description="evaluation")
 
         # Mixed precision setup
         self.use_apex = False
@@ -1191,11 +1191,12 @@ class Trainer:
 
             self.log(logs)
 
-            metrics = self.evaluate()
+            metrics = self.evaluate(eval_datasets=self.eval_datasets)
             self._report_to_hp_search(trial, epoch, metrics)
 
         if self.control.should_save:
-            self._save_checkpoint(model, trial, metrics=metrics)
+            #self._save_checkpoint(model, trial, metrics=metrics)
+            self._save_checkpoint(model, trial)
             self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 
     def _save_checkpoint(self, model, trial, metrics=None):
@@ -1623,7 +1624,7 @@ class Trainer:
 
     def evaluate(
         self,
-        eval_dataset: Optional[Dataset] = None,
+        eval_datasets: Optional[Dict[str, Dataset]] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
     ) -> Dict[str, float]:
@@ -1654,27 +1655,32 @@ class Trainer:
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
 
-        if eval_dataset is not None and not isinstance(eval_dataset, collections.abc.Sized):
-            raise ValueError("eval_dataset must implement __len__")
+        #if eval_dataset is not None and not isinstance(eval_dataset, collections.abc.Sized):
+        #    raise ValueError("eval_dataset must implement __len__")
 
-        eval_dataloader = self.get_eval_dataloader(eval_dataset)
-        start_time = time.time()
+        metrics = {}
+        for name, eval_dataset in eval_datasets.items():
+            eval_dataloader = self.get_eval_dataloader(eval_dataset)
+            start_time = time.time()
 
-        output = self.prediction_loop(
-            eval_dataloader,
-            description="Evaluation",
-            # No point gathering the predictions if there are no metrics, otherwise we defer to
-            # self.args.prediction_loss_only
-            prediction_loss_only=True if self.compute_metrics is None else None,
-            ignore_keys=ignore_keys,
-            metric_key_prefix=metric_key_prefix,
-        )
-        #print(output)
-        #with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
-        #    writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
-
-        n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
-        output.metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))
+            output = self.prediction_loop(
+                eval_dataloader,
+                description="Evaluation_" + name,
+                # No point gathering the predictions if there are no metrics, otherwise we defer to
+                # self.args.prediction_loss_only
+                prediction_loss_only=True if self.compute_metrics is None else None,
+                ignore_keys=ignore_keys,
+                metric_key_prefix=metric_key_prefix + '_' + name,
+                metrics = metrics,
+            )
+            #print(output)
+            #with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
+            #    writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
+            #    for i in range(len(output.predictions)):
+            #        writer.write(json.dumps({'preds': output.predictions[i].tolist(), 'labels': output.label_ids[i].tolist()}) + '\n')
+            #n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
+            #output.metrics.update(speed_metrics(metric_key_prefix + '_' + name, start_time, n_samples))
+            metrics = output.metrics
         self.log(output.metrics)
 
         if self.args.tpu_metrics_debug or self.args.debug:
@@ -1745,6 +1751,7 @@ class Trainer:
         prediction_loss_only: Optional[bool] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
+        metrics: Optional[Dict[str, float]] = None,
     ) -> PredictionOutput:
         """
         Prediction/evaluation loop, shared by :obj:`Trainer.evaluate()` and :obj:`Trainer.predict()`.
@@ -1772,6 +1779,7 @@ class Trainer:
         batch_size = dataloader.batch_size
         num_examples = self.num_examples(dataloader)
         logger.info("***** Running %s *****", description)
+        logger.info("***** Running %s *****", metric_key_prefix)
         logger.info("  Num examples = %d", num_examples)
         logger.info("  Batch size = %d", batch_size)
         losses_host: torch.Tensor = None
@@ -1835,21 +1843,22 @@ class Trainer:
         preds = preds_gatherer.finalize() if not prediction_loss_only else None
         label_ids = labels_gatherer.finalize() if not prediction_loss_only else None
 
-        if self.compute_metrics is not None and preds is not None and label_ids is not None:
-            metrics = self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids))
-        else:
+        if not metrics:
             metrics = {}
+        if self.compute_metrics is not None and preds is not None and label_ids is not None:
+            metrics.update(self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids)))
 
         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
         metrics = denumpify_detensorize(metrics)
 
         if eval_loss is not None:
-            metrics[f"{metric_key_prefix}_loss"] = eval_loss.mean().item()
+            metrics[f"{metric_key_prefix}/loss"] = eval_loss.mean().item()
 
         # Prefix all keys with metric_key_prefix + '_'
         for key in list(metrics.keys()):
-            if not key.startswith(f"{metric_key_prefix}_"):
-                metrics[f"{metric_key_prefix}_{key}"] = metrics.pop(key)
+            #if not key.startswith(f"{metric_key_prefix}_"):
+            if not key.startswith("eval_"):
+                metrics[f"{metric_key_prefix}/{key}"] = metrics.pop(key)
 
         return PredictionOutput(predictions=preds, label_ids=label_ids, metrics=metrics)
 

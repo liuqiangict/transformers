@@ -20,6 +20,7 @@ import logging
 import os
 import random
 import sys
+import glob
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -129,7 +130,8 @@ class DataTrainingArguments:
         else:
             train_extension = self.train_file.split(".")[-1]
             assert train_extension in ["csv", "json"], "`train_file` should be a csv or a json file."
-            validation_extension = self.validation_file.split(".")[-1]
+            #validation_extension = self.validation_file.split(".")[-1]
+            validation_extension = 'json'
             assert (
                 validation_extension == train_extension
             ), "`validation_file` should have the same extension (csv or json) as `train_file`."
@@ -240,7 +242,14 @@ def main():
     else:
         # Loading a dataset from your local files.
         # CSV/JSON training and evaluation files are needed.
-        data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
+        data_files = {"train": data_args.train_file}
+        validation_files = glob.glob(os.path.join(data_args.validation_file, '*.json'))
+        for validation_file in validation_files:
+            validation_file_name = os.path.basename(validation_file)
+            validation_file_name = os.path.splitext(validation_file_name)[0]
+            data_files['validation_' + validation_file_name] = validation_file
+
+        #data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
 
         # Get the test dataset: you can provide your own CSV/JSON test file (see below)
         # when you use `do_predict` without specifying a GLUE benchmark task.
@@ -275,9 +284,10 @@ def main():
             num_labels = 1
     else:
         # Trying to have good defaults here, don't hesitate to tweak to your needs.
-        is_regression = datasets["train"].features["label"].dtype in ["float32", "float64"]
+        #is_regression = datasets["train"].features["label"].dtype in ["float32", "float64"]
+        is_regression = True
         if is_regression:
-            num_labels = 1
+            num_labels = 2
         else:
             # A useful fast method:
             # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.unique
@@ -372,7 +382,8 @@ def main():
 
         # Map labels to IDs (not necessary for GLUE tasks)
         if label_to_id is not None and "label" in examples:
-            result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+            #result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
+            result["label"] = examples["label"]
         result['guid'] = examples['guid']
         return result
 
@@ -385,11 +396,15 @@ def main():
             train_dataset = train_dataset.select(range(data_args.max_train_samples))
 
     if training_args.do_eval:
-        if "validation" not in datasets and "validation_matched" not in datasets:
-            raise ValueError("--do_eval requires a validation dataset")
-        eval_dataset = datasets["validation_matched" if data_args.task_name == "mnli" else "validation"]
-        if data_args.max_val_samples is not None:
-            eval_dataset = eval_dataset.select(range(data_args.max_val_samples))
+        #if "validation" not in datasets and "validation_matched" not in datasets:
+        #    raise ValueError("--do_eval requires a validation dataset")
+        #eval_dataset = datasets["validation_matched" if data_args.task_name == "mnli" else "validation"]
+        #if data_args.max_val_samples is not None:
+        #    eval_dataset = eval_dataset.select(range(data_args.max_val_samples))
+        eval_datasets = {}
+        for k, v in datasets.items():
+            if 'validation_' in k:
+                eval_datasets[k[11:]] = v
 
     if training_args.do_predict or data_args.task_name is not None or data_args.test_file is not None:
         if "test" not in datasets and "test_matched" not in datasets:
@@ -413,21 +428,27 @@ def main():
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
         preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
-        probabilities = [pred[1] for pred in preds]
-        softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
-        softmax_probabilities = [pred[1] for pred in softmax_preds]
-        if data_args.task_name is not None:
-            result = metric.compute(predictions=preds, references=p.label_ids)
-            if len(result) > 1:
-                result["combined_score"] = np.mean(list(result.values())).item()
-            return result
-        elif is_regression:
-            return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
-        else:
-            #return {"accuracy": (preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, preds).mean().item()}
-            #return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
-            return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
+        relevance_preds = [pred[0] for pred in preds]
+        relevance_label = [int(label[0]) for label in p.label_ids]
+        useful_preds = [pred[1] for pred in preds]
+        useful_label = [int(label[1]) for label in p.label_ids]
+        return {'relevance_auc': roc_auc_score(relevance_label, relevance_preds).mean().item(), 'useful_auc': roc_auc_score(useful_label, useful_preds).mean().item()}
+        #bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
+        #probabilities = [pred[1] for pred in preds]
+        #softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
+        #softmax_probabilities = [pred[1] for pred in softmax_preds]
+        #if data_args.task_name is not None:
+        #    result = metric.compute(predictions=preds, references=p.label_ids)
+        #    if len(result) > 1:
+        #        result["combined_score"] = np.mean(list(result.values())).item()
+        #    return result
+        #elif is_regression:
+        #    return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
+        #else:
+        #   return {"accuracy": (preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, preds).mean().item()}
+        #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
+        #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
+        #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
@@ -442,7 +463,7 @@ def main():
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
+        eval_datasets=eval_datasets if training_args.do_eval else None,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
         data_collator=data_collator,
@@ -477,20 +498,21 @@ def main():
         logger.info("*** Evaluate ***")
 
         # Loop to handle MNLI double evaluation (matched, mis-matched)
-        tasks = [data_args.task_name]
-        eval_datasets = [eval_dataset]
-        if data_args.task_name == "mnli":
-            tasks.append("mnli-mm")
-            eval_datasets.append(datasets["validation_mismatched"])
+        #tasks = [data_args.task_name]
+        #eval_datasets = [eval_dataset]
+        #if data_args.task_name == "mnli":
+        #    tasks.append("mnli-mm")
+        #    eval_datasets.append(datasets["validation_mismatched"])
 
-        for eval_dataset, task in zip(eval_datasets, tasks):
-            metrics = trainer.evaluate(eval_dataset=eval_dataset)
+        metrics = trainer.evaluate(eval_datasets=eval_datasets)
+        #for eval_dataset, task in zip(eval_datasets, tasks):
+        #    metrics = trainer.evaluate(eval_dataset=eval_dataset)
 
-            max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
-            metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
+        #    max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
+        #    metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
 
-            trainer.log_metrics("eval", metrics)
-            trainer.save_metrics("eval", metrics)
+        #    trainer.log_metrics("eval", metrics)
+        #    trainer.save_metrics("eval", metrics)
 
     if training_args.do_predict:
         logger.info("*** Test ***")
