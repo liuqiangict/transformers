@@ -1846,7 +1846,7 @@ class Trainer:
         if not metrics:
             metrics = {}
         if self.compute_metrics is not None and preds is not None and label_ids is not None:
-            metrics.update(self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids)))
+            metrics.update(self.compute_metrics(EvalPrediction(predictions=preds, label_ids=label_ids, metric_key_prefix=metric_key_prefix)))
 
         # To be JSON-serializable, we need to remove numpy types or zero-d tensors
         metrics = denumpify_detensorize(metrics)

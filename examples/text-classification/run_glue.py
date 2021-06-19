@@ -427,12 +427,15 @@ def main():
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
-        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-        relevance_preds = [pred[0] for pred in preds]
-        relevance_label = [int(label[0]) for label in p.label_ids]
-        useful_preds = [pred[1] for pred in preds]
-        useful_label = [int(label[1]) for label in p.label_ids]
-        return {'relevance_auc': roc_auc_score(relevance_label, relevance_preds).mean().item(), 'useful_auc': roc_auc_score(useful_label, useful_preds).mean().item()}
+        metric_key_prefix = p.predictions[2]
+        if 'sbs' in metric_key_prefix:
+        else:
+            preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+            relevance_preds = [pred[0] for pred in preds]
+            relevance_label = [int(label[0]) for label in p.label_ids]
+            useful_preds = [pred[1] for pred in preds]
+            useful_label = [int(label[1]) for label in p.label_ids]
+            return {'relevance_auc': roc_auc_score(relevance_label, relevance_preds).mean().item(), 'useful_auc': roc_auc_score(useful_label, useful_preds).mean().item()}
         #bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
         #probabilities = [pred[1] for pred in preds]
         #softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
