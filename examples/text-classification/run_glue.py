@@ -287,7 +287,7 @@ def main():
         #is_regression = datasets["train"].features["label"].dtype in ["float32", "float64"]
         is_regression = True
         if is_regression:
-            num_labels = 2
+            num_labels = 3
         else:
             # A useful fast method:
             # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.unique
@@ -427,8 +427,19 @@ def main():
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
-        metric_key_prefix = p.predictions[2]
+        metric_key_prefix = p.metric_key_prefix
+        print('*' * 150)
+        print(metric_key_prefix)
         if 'sbs' in metric_key_prefix:
+            preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+            caption_preds = [pred[2] for pred in preds]
+            total = 0
+            corre = 0
+            for i in range(len(caption_preds) // 2):
+                total += 1
+                if caption_preds[i * 2] < caption_preds[i * 2 + 1]:
+                    corre += 1
+            return {"accuracy": corre / total}
         else:
             preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
             relevance_preds = [pred[0] for pred in preds]
