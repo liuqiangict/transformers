@@ -74,7 +74,6 @@ class EvalPrediction(NamedTuple):
 
     predictions: Union[np.ndarray, Tuple[np.ndarray]]
     label_ids: np.ndarray
-    metric_key_prefix: str
 
 
 class PredictionOutput(NamedTuple):
