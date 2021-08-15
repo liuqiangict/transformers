@@ -1523,8 +1523,9 @@ class BertForSequenceClassification(BertPreTrainedModel):
                 loss_fct = MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             elif self.multi_target:
-                #loss_fct = MultiLabelSoftMarginLoss(weight=loss_weights)
-                loss_fct = MultiLabelSoftMarginLoss()
+                loss_weights = torch.tensor([1., 1., 4.], device=logits.device)
+                loss_fct = MultiLabelSoftMarginLoss(weight=loss_weights)
+                #loss_fct = MultiLabelSoftMarginLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1, self.num_labels))
             else:
                 loss_fct = CrossEntropyLoss()
