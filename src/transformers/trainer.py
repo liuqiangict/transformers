@@ -1177,6 +1177,7 @@ class Trainer:
         return TrainOutput(self.state.global_step, self._total_loss_scalar / self.state.global_step, metrics)
 
     def _maybe_log_save_evaluate(self, tr_loss, model, trial, epoch):
+        metrics = None
         if self.control.should_log:
             logs: Dict[str, float] = {}
             tr_loss_scalar = tr_loss.item()
@@ -1196,7 +1197,7 @@ class Trainer:
 
         if self.control.should_save:
             #self._save_checkpoint(model, trial, metrics=metrics)
-            self._save_checkpoint(model, trial)
+            self._save_checkpoint(model, trial, metrics=metrics)
             self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 
     def _save_checkpoint(self, model, trial, metrics=None):
@@ -1225,6 +1226,8 @@ class Trainer:
         if self.deepspeed:
             self.deepspeed.save_checkpoint(output_dir)
 
+        with open(os.path.join(output_dir, 'metrics.json'), mode='w', encoding='utf-8') as writer:
+            writer.write(json.dumps(metrics))
         # Save optimizer and scheduler
         if self.sharded_ddp == ShardedDDPOption.SIMPLE:
             self.optimizer.consolidate_state_dict()
