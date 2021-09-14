@@ -70,4 +70,5 @@ from . import (
     xlm_roberta,
     xlnet,
     unilm,
+    tulrv5,
 )

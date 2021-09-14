@@ -172,6 +172,7 @@ _import_structure = {
     "models.ctrl": ["CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP", "CTRLConfig", "CTRLTokenizer"],
     "models.deberta": ["DEBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP", "DebertaConfig", "DebertaTokenizer"],
     "models.deberta_v2": ["DEBERTA_V2_PRETRAINED_CONFIG_ARCHIVE_MAP", "DebertaV2Config", "DebertaV2Tokenizer"],
+    "models.tulrv5": ["TULRv5_PRETRAINED_CONFIG_ARCHIVE_MAP", "TULRv5Config", "TULRv5Tokenizer"],
     "models.distilbert": ["DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "DistilBertConfig", "DistilBertTokenizer"],
     "models.dpr": [
         "DPR_PRETRAINED_CONFIG_ARCHIVE_MAP",
@@ -1377,6 +1378,7 @@ if TYPE_CHECKING:
     from .models.ctrl import CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP, CTRLConfig, CTRLTokenizer
     from .models.deberta import DEBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, DebertaConfig, DebertaTokenizer
     from .models.deberta_v2 import DEBERTA_V2_PRETRAINED_CONFIG_ARCHIVE_MAP, DebertaV2Config, DebertaV2Tokenizer
+    from .models.tulrv5 import TULRv5_PRETRAINED_CONFIG_ARCHIVE_MAP, TULRv5Config, TULRv5Tokenizer
     from .models.distilbert import DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, DistilBertConfig, DistilBertTokenizer
     from .models.dpr import (
         DPR_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -1718,6 +1720,12 @@ if TYPE_CHECKING:
             DebertaV2ForTokenClassification,
             DebertaV2Model,
             DebertaV2PreTrainedModel,
+        )
+        from .models.tulrv5 import (
+            TULRv5_PRETRAINED_MODEL_ARCHIVE_MAP,
+            TULRv5Model,
+            TULRv5ForSequenceClassification,
+            TULRv5ForQuestionAnswering,
         )
         from .models.distilbert import (
             DISTILBERT_PRETRAINED_MODEL_ARCHIVE_LIST,

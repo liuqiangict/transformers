@@ -29,6 +29,7 @@ from ..blenderbot_small.tokenization_blenderbot_small import BlenderbotSmallToke
 from ..convbert.tokenization_convbert import ConvBertTokenizer
 from ..ctrl.tokenization_ctrl import CTRLTokenizer
 from ..deberta.tokenization_deberta import DebertaTokenizer
+from ..tulrv5.tokenization_tulrv5 import TULRv5Tokenizer
 from ..distilbert.tokenization_distilbert import DistilBertTokenizer
 from ..dpr.tokenization_dpr import DPRQuestionEncoderTokenizer
 from ..electra.tokenization_electra import ElectraTokenizer
@@ -68,6 +69,7 @@ from .configuration_auto import (
     CTRLConfig,
     DebertaConfig,
     DebertaV2Config,
+    TULRv5Config,
     DistilBertConfig,
     DPRConfig,
     ElectraConfig,
@@ -115,6 +117,7 @@ if is_sentencepiece_available():
     from ..bert_generation.tokenization_bert_generation import BertGenerationTokenizer
     from ..camembert.tokenization_camembert import CamembertTokenizer
     from ..deberta_v2.tokenization_deberta_v2 import DebertaV2Tokenizer
+    from ..tulrv5.tokenization_tulrv5 import TULRv5Tokenizer
     from ..m2m_100 import M2M100Tokenizer
     from ..marian.tokenization_marian import MarianTokenizer
     from ..mbart.tokenization_mbart import MBartTokenizer
@@ -248,6 +251,7 @@ TOKENIZER_MAPPING = OrderedDict(
         (BertGenerationConfig, (BertGenerationTokenizer, None)),
         (DebertaConfig, (DebertaTokenizer, None)),
         (DebertaV2Config, (DebertaV2Tokenizer, None)),
+        (TULRv5Config, (TULRv5Tokenizer, None)),
         (RagConfig, (RagTokenizer, None)),
         (XLMProphetNetConfig, (XLMProphetNetTokenizer, None)),
         (Speech2TextConfig, (Speech2TextTokenizer, None)),

@@ -76,6 +76,8 @@ def mish(x):
 def linear_act(x):
     return x
 
+def swish(x):
+    return x * torch.sigmoid(x)
 
 ACT2FN = {
     "relu": F.relu,

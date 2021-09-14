@@ -32,6 +32,7 @@ from ..convbert.configuration_convbert import CONVBERT_PRETRAINED_CONFIG_ARCHIVE
 from ..ctrl.configuration_ctrl import CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP, CTRLConfig
 from ..deberta.configuration_deberta import DEBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, DebertaConfig
 from ..deberta_v2.configuration_deberta_v2 import DEBERTA_V2_PRETRAINED_CONFIG_ARCHIVE_MAP, DebertaV2Config
+from ..tulrv5.configuration_tulrv5 import TULRV5_PRETRAINED_CONFIG_ARCHIVE_MAP, TULRv5Config 
 from ..distilbert.configuration_distilbert import DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, DistilBertConfig
 from ..dpr.configuration_dpr import DPR_PRETRAINED_CONFIG_ARCHIVE_MAP, DPRConfig
 from ..electra.configuration_electra import ELECTRA_PRETRAINED_CONFIG_ARCHIVE_MAP, ElectraConfig
@@ -155,6 +156,7 @@ CONFIG_MAPPING = OrderedDict(
         ("roberta", RobertaConfig),
         ("deberta-v2", DebertaV2Config),
         ("deberta", DebertaConfig),
+        ("tulrv5", TULRv5Config),
         ("flaubert", FlaubertConfig),
         ("fsmt", FSMTConfig),
         ("squeezebert", SqueezeBertConfig),
@@ -221,6 +223,7 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("lxmert", "LXMERT"),
         ("deberta-v2", "DeBERTa-v2"),
         ("deberta", "DeBERTa"),
+        ("tulrv5", "TULRv5"),
         ("layoutlm", "LayoutLM"),
         ("dpr", "DPR"),
         ("rag", "RAG"),

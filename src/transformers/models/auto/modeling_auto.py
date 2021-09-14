@@ -89,6 +89,11 @@ from ..deberta_v2.modeling_deberta_v2 import (
     DebertaV2ForTokenClassification,
     DebertaV2Model,
 )
+from ..tulrv5.modeling_tulrv5 import (
+    TULRv5ForQuestionAnswering,
+    TULRv5ForSequenceClassification,
+    TULRv5Model,
+)
 from ..distilbert.modeling_distilbert import (
     DistilBertForMaskedLM,
     DistilBertForMultipleChoice,
@@ -275,6 +280,7 @@ from .configuration_auto import (
     CTRLConfig,
     DebertaConfig,
     DebertaV2Config,
+    TULRv5Config,
     DistilBertConfig,
     DPRConfig,
     ElectraConfig,
@@ -360,6 +366,7 @@ MODEL_MAPPING = OrderedDict(
         (BertGenerationConfig, BertGenerationEncoder),
         (DebertaConfig, DebertaModel),
         (DebertaV2Config, DebertaV2Model),
+        (TULRv5Config, TULRv5Model),
         (DPRConfig, DPRQuestionEncoder),
         (XLMProphetNetConfig, XLMProphetNetModel),
         (ProphetNetConfig, ProphetNetModel),
@@ -551,6 +558,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING = OrderedDict(
         (FunnelConfig, FunnelForSequenceClassification),
         (DebertaConfig, DebertaForSequenceClassification),
         (DebertaV2Config, DebertaV2ForSequenceClassification),
+        (TULRv5Config, TULRv5ForSequenceClassification),
         (GPT2Config, GPT2ForSequenceClassification),
         (OpenAIGPTConfig, OpenAIGPTForSequenceClassification),
         (ReformerConfig, ReformerForSequenceClassification),
@@ -589,6 +597,7 @@ MODEL_FOR_QUESTION_ANSWERING_MAPPING = OrderedDict(
         (MPNetConfig, MPNetForQuestionAnswering),
         (DebertaConfig, DebertaForQuestionAnswering),
         (DebertaV2Config, DebertaV2ForQuestionAnswering),
+        (TULRv5Config, TULRv5ForQuestionAnswering),
         (IBertConfig, IBertForQuestionAnswering),
     ]
 )

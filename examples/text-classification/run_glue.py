@@ -441,12 +441,16 @@ def main():
                     corre += 1
             return {"accuracy": corre / total}
         else:
+            #preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+            #relevance_preds = [pred[0] for pred in preds]
+            #relevance_label = [int(label[0]) for label in p.label_ids]
+            #useful_preds = [pred[1] for pred in preds]
+            #useful_label = [int(label[1]) for label in p.label_ids]
+            #return {'relevance_auc': roc_auc_score(relevance_label, relevance_preds).mean().item(), 'useful_auc': roc_auc_score(useful_label, useful_preds).mean().item()}
             preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
-            relevance_preds = [pred[0] for pred in preds]
-            relevance_label = [int(label[0]) for label in p.label_ids]
-            useful_preds = [pred[1] for pred in preds]
-            useful_label = [int(label[1]) for label in p.label_ids]
-            return {'relevance_auc': roc_auc_score(relevance_label, relevance_preds).mean().item(), 'useful_auc': roc_auc_score(useful_label, useful_preds).mean().item()}
+            softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
+            softmax_probabilities = [pred[1] for pred in softmax_preds]
+            return {'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
         #bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
         #probabilities = [pred[1] for pred in preds]
         #softmax_preds = [np.exp(pred) / np.sum(np.exp(pred), axis=0) for pred in preds]
