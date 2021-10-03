@@ -55,7 +55,6 @@ from ..tapas.tokenization_tapas import TapasTokenizer
 from ..transfo_xl.tokenization_transfo_xl import TransfoXLTokenizer
 from ..wav2vec2.tokenization_wav2vec2 import Wav2Vec2CTCTokenizer
 from ..xlm.tokenization_xlm import XLMTokenizer
-from ..unilm.tokenization_unilm import UniLMTokenizer
 from .configuration_auto import (
     AlbertConfig,
     AutoConfig,
@@ -106,7 +105,6 @@ from .configuration_auto import (
     XLMProphetNetConfig,
     XLMRobertaConfig,
     XLNetConfig,
-    UniLMConfig,
     replace_list_option_in_docstrings,
 )
 
@@ -129,7 +127,6 @@ if is_sentencepiece_available():
     from ..xlm_prophetnet.tokenization_xlm_prophetnet import XLMProphetNetTokenizer
     from ..xlm_roberta.tokenization_xlm_roberta import XLMRobertaTokenizer
     from ..xlnet.tokenization_xlnet import XLNetTokenizer
-    from ..unilm.tokenization_unilm import UniLMTokenizer
 else:
     AlbertTokenizer = None
     BarthezTokenizer = None
@@ -263,7 +260,6 @@ TOKENIZER_MAPPING = OrderedDict(
         (ConvBertConfig, (ConvBertTokenizer, ConvBertTokenizerFast)),
         (IBertConfig, (RobertaTokenizer, RobertaTokenizerFast)),
         (Wav2Vec2Config, (Wav2Vec2CTCTokenizer, None)),
-        (UniLMConfig, (UniLMTokenizer, None)),
     ]
 )
 

@@ -599,28 +599,54 @@ class TULRv5ForSequenceClassification(TULRv5PreTrainedModel):
     
     def forward(
         self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
+        input_ids_a=None,
+        attention_mask_a=None,
+        token_type_ids_a=None,
+        input_ids_b=None,
+        attention_mask_b=None,
+        token_type_ids_b=None,
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
         labels=None,
     ):
-        outputs = self.tulrv5(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
+        outputs_a = self.tulrv5(
+            input_ids_a,
+            attention_mask=attention_mask_a,
+            token_type_ids=token_type_ids_a,
             position_ids=position_ids,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
         )
 
-        pooled_output = outputs[1]
+        outputs_b = self.tulrv5(
+            input_ids_b,
+            attention_mask=attention_mask_b,
+            token_type_ids=token_type_ids_b,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+        )
 
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        pooled_output_a = outputs_a[1]
+        pooled_output_b = outputs_b[1]
 
+        pooled_output_a = self.dropout(pooled_output_a)
+        pooled_output_b = self.dropout(pooled_output_b)
+
+        logits_a = self.classifier(pooled_output_a)
+        logits_b = self.classifier(pooled_output_b)
+
+        logits = torch.cat([logits_a, logits_b], 1)
+        #loss_fct = nn.CrossEntropyLoss()
+        loss_fct = nn.MarginRankingLoss()
+        #loss = loss_fct(logits.view(-1, 2), labels.view(-1, 1).squeeze(1))
+        loss = loss_fct(logits_b.view(-1, 1).squeeze(1), logits_a.view(-1, 1).squeeze(1), labels.view(-1, 1).squeeze(1))
+
+        outputs = (loss, logits)
+
+        return outputs 
+        '''
         outputs = (logits,) + outputs[2:]  # add hidden states and attention if they are here
 
         if labels is not None:
@@ -634,6 +660,7 @@ class TULRv5ForSequenceClassification(TULRv5PreTrainedModel):
             outputs = (loss,) + outputs
 
         return outputs  # (loss), logits, (hidden_states), (attentions)
+        '''
 
 class TULRv5ForTokenClassification(TULRv5PreTrainedModel):
     def __init__(self, config):

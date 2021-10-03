@@ -221,7 +221,6 @@ _import_structure = {
     "models.xlm_prophetnet": ["XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "XLMProphetNetConfig"],
     "models.xlm_roberta": ["XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP", "XLMRobertaConfig"],
     "models.xlnet": ["XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "XLNetConfig"],
-    "models.unilm": ["UNILM_PRETRAINED_CONFIG_ARCHIVE_MAP", "UniLMConfig"],
     "pipelines": [
         "Conversation",
         "ConversationalPipeline",
@@ -887,18 +886,6 @@ if is_torch_available():
             "load_tf_weights_in_xlnet",
         ]
     )
-    _import_structure["models.xlnet"].extend(
-        [
-            "UNILM_PRETRAINED_MODEL_ARCHIVE_LIST",
-            "UniLMForMultipleChoice",
-            "UniLMForQuestionAnswering",
-            "UniLMForQuestionAnsweringSimple",
-            "UniLMForSequenceClassification",
-            "UniLMModel",
-            "UniLMPreTrainedModel",
-        ]
-    )
-
     _import_structure["optimization"] = [
         "Adafactor",
         "AdamW",
@@ -1441,7 +1428,6 @@ if TYPE_CHECKING:
     from .models.xlm_prophetnet import XLM_PROPHETNET_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMProphetNetConfig
     from .models.xlm_roberta import XLM_ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP, XLMRobertaConfig
     from .models.xlnet import XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP, XLNetConfig
-    from .models.unilm import UNILM_PRETRAINED_CONFIG_ARCHIVE_MAP, UniLMConfig
 
     # Pipelines
     from .pipelines import (
@@ -1508,7 +1494,6 @@ if TYPE_CHECKING:
         from .models.xlm_prophetnet import XLMProphetNetTokenizer
         from .models.xlm_roberta import XLMRobertaTokenizer
         from .models.xlnet import XLNetTokenizer
-        from .models.unilm import UniLMTokenizer
     else:
         from .utils.dummy_sentencepiece_objects import *
 
@@ -1999,14 +1984,6 @@ if TYPE_CHECKING:
             XLNetModel,
             XLNetPreTrainedModel,
             load_tf_weights_in_xlnet,
-        )
-
-        from .models.unilm import (
-            UNILM_PRETRAINED_MODEL_ARCHIVE_LIST,
-            UniLMForQuestionAnswering,
-            UniLMForSequenceClassification,
-            UniLMModel,
-            UniLMPreTrainedModel,
         )
 
         # Optimization

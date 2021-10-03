@@ -26,10 +26,10 @@ import shutil
 import sys
 import time
 import warnings
+import json
 from logging import StreamHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-import json
 
 
 # Integrations must be imported before ML frameworks:
@@ -1677,13 +1677,38 @@ class Trainer:
                 metrics = metrics,
             )
             #print(output)
-            with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
+            with open(os.path.join(self.args.output_dir, name + '_output.json'), mode='w', encoding='utf-8') as writer:
                 for i in range(len(output.predictions)):
                     writer.write(json.dumps({'preds': output.predictions[i].tolist(), 'labels': output.label_ids[i].tolist()}) + '\n')
             #n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
             #output.metrics.update(speed_metrics(metric_key_prefix + '_' + name, start_time, n_samples))
             metrics = output.metrics
             self.log(metrics)
+        '''
+        if eval_dataset is not None and not isinstance(eval_dataset, collections.abc.Sized):
+            raise ValueError("eval_dataset must implement __len__")
+
+        eval_dataloader = self.get_eval_dataloader(eval_dataset)
+        start_time = time.time()
+
+        output = self.prediction_loop(
+            eval_dataloader,
+            description="Evaluation",
+            # No point gathering the predictions if there are no metrics, otherwise we defer to
+            # self.args.prediction_loss_only
+            prediction_loss_only=True if self.compute_metrics is None else None,
+            ignore_keys=ignore_keys,
+            metric_key_prefix=metric_key_prefix,
+        )
+        #print(output)
+        with open(os.path.join(self.args.output_dir, 'output.json'), mode='w', encoding='utf-8') as writer:
+            for i in range(len(output.predictions)):
+                writer.write(json.dumps({'preds': output.predictions[i].tolist(), 'labels': output.label_ids[i].tolist()}) + '\n')
+            #writer.write(json.dumps({'preds': output.predictions.tolist(), 'labels': output.label_ids.tolist()}))
+
+        n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
+        output.metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))
+        '''
         self.log(output.metrics)
 
         if self.args.tpu_metrics_debug or self.args.debug:

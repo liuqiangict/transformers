@@ -331,8 +331,8 @@ def main():
         non_label_column_names = [name for name in datasets["train"].column_names if name != "label"]
         if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
             sentence1_key, sentence2_key = "sentence1", "sentence2"
-        if "query" in non_label_column_names and "answer" in non_label_column_names:
-            sentence1_key, sentence2_key = "query", "answer"
+        if "query" in non_label_column_names and "answer_a" in non_label_column_names:
+            sentence1_key, sentence2_key, sentence3_key = "query", "answer_a", "answer_b"
         else:
             if len(non_label_column_names) >= 2:
                 sentence1_key, sentence2_key = non_label_column_names[1:3]
@@ -378,12 +378,22 @@ def main():
         args = (
             (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
         )
-        result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+        result_a = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+        args = (
+            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence3_key])
+        )
+        result_b = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
+        result = {}
+        for k, v in result_a.items():
+            result[k + '_a'] = v
+        for k, v in result_b.items():
+            result[k + '_b'] = v
         # Map labels to IDs (not necessary for GLUE tasks)
         if label_to_id is not None and "label" in examples:
             #result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
-            result["label"] = examples["label"]
+            #result["label"] = examples["label"]
+            result["label"] = [1 for l in examples["label"]]
         result['guid'] = examples['guid']
         return result
 
@@ -427,6 +437,7 @@ def main():
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
     def compute_metrics(p: EvalPrediction):
+        '''
         metric_key_prefix = p.metric_key_prefix
         print('*' * 150)
         print(metric_key_prefix)
@@ -467,6 +478,19 @@ def main():
         #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, probabilities).mean().item()}
         #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
         #   return {"accuracy": (bin_preds == p.label_ids).astype(np.float32).mean().item(), 'auc': roc_auc_score(p.label_ids, softmax_probabilities).mean().item()}
+        '''
+        preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions
+        bin_preds = np.squeeze(preds) if is_regression else np.argmax(preds, axis=1)
+        labels = [1 for label in p.label_ids]
+        if data_args.task_name is not None:
+            result = metric.compute(predictions=preds, references=p.label_ids)
+            if len(result) > 1:
+                result["combined_score"] = np.mean(list(result.values())).item()
+            return result
+        elif is_regression:
+            return {"mse": ((preds - p.label_ids) ** 2).mean().item()}
+        else:
+            return {"acc": (bin_preds == labels).astype(np.float32).mean().item()}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
     if data_args.pad_to_max_length:
