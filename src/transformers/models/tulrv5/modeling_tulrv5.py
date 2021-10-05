@@ -589,16 +589,18 @@ class TULRv5Model(TULRv5PreTrainedModel):
 class TULRv5ForSequenceClassification(TULRv5PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.num_labels = config.num_labels
+        #self.num_labels = config.num_labels
+        self.num_labels = 1
 
         self.tulrv5 = TULRv5Model(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, self.num_labels)
 
         self.init_weights()
     
     def forward(
         self,
+        guid=None,
         input_ids_a=None,
         attention_mask_a=None,
         token_type_ids_a=None,
